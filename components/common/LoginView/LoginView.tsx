@@ -56,15 +56,26 @@ const LoginView: FC<{}> = ({}) => {
             </span>
           </div>
           <div className="col-span-3 pl-3">
-            <h2 className="mb-2">Login</h2>
+            <h1
+              style={{
+                color: "#ECBA5F",
+                textAlign: "center",
+                fontSize: "48px",
+                marginTop: "72px"
+              }}
+            >
+              Coming <br />
+              soon...
+            </h1>
+            {/* <h2 className="mb-2">Login</h2> */}
 
-            <p
+            {/* <p
               className="mb-8 text"
               style={{ color: "#5B5D62", lineHeight: "17px" }}
             >
               Use your password to unlock your speakeasy identity
-            </p>
-            <input
+            </p> */}
+            {/* <input
               type="password"
               placeholder="Enter your password"
               value={password}
@@ -77,16 +88,16 @@ const LoginView: FC<{}> = ({}) => {
                   handleSubmit();
                 }
               }}
-            />
+            /> */}
 
-            <div className="flex flex-col mt-4">
+            {/* <div className="flex flex-col mt-4">
               <ModalCtaButton
                 buttonCopy="Login"
                 cssClass={s.button}
                 onClick={handleSubmit}
               />
-            </div>
-            {error && (
+            </div> */}
+            {/* {error && (
               <div
                 style={{
                   color: "var(--red)",
@@ -101,19 +112,27 @@ const LoginView: FC<{}> = ({}) => {
               >
                 {error}
               </div>
-            )}
+            )} */}
           </div>
         </div>
 
         <div className={cn("grid grid-cols-12 gap-0", s.footer)}>
-          <div className={cn("flex flex-col col-span-3", s.perkCard)}>
+          <a
+            className={cn("flex flex-col col-span-3", s.perkCard)}
+            href="https://www.speakeasy.tech/open-source/"
+            target="_blank"
+          >
             <OpenSource />
             <span className={cn(s.perkCard__title)}>Open Source</span>
             <span className={cn(s.perkCard__description)}>
               Every line — open source. Forever.
             </span>
-          </div>
-          <div className={cn("flex flex-col col-span-3", s.perkCard)}>
+          </a>
+          <a
+            className={cn("flex flex-col col-span-3", s.perkCard)}
+            href="https://www.speakeasy.tech/how-it-works/"
+            target="_blank"
+          >
             <NormalHash />
             <span className={cn(s.perkCard__title)}>
               Fundamentally Different
@@ -121,18 +140,22 @@ const LoginView: FC<{}> = ({}) => {
             <span className={cn(s.perkCard__description)}>
               Powered by the first decentralized mixnet-blockchain
             </span>
-          </div>
-          <div className={cn("flex flex-col col-span-3", s.perkCard)}>
+          </a>
+          <a
+            className={cn("flex flex-col col-span-3", s.perkCard)}
+            href="https://www.speakeasy.tech/roadmap/"
+            target="_blank"
+          >
             <RoadMap />
             <span className={cn(s.perkCard__title)}>Roadmap</span>
             <span className={cn(s.perkCard__description)}>
               Building to the future
             </span>
-          </div>
+          </a>
           <div className={cn("flex flex-col col-span-3", s.perkCard)}>
             <Chat />
             <span className={cn(s.perkCard__title)}>
-              Join the discussion on the official feedback speakeasy
+              Join the discussion on the official feedback speakeasy (SOON)
             </span>
           </div>
         </div>
