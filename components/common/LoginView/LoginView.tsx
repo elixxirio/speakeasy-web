@@ -121,6 +121,7 @@ const LoginView: FC<{}> = ({}) => {
             className={cn("flex flex-col col-span-3", s.perkCard)}
             href="https://www.speakeasy.tech/open-source/"
             target="_blank"
+            rel="noreferrer"
           >
             <OpenSource />
             <span className={cn(s.perkCard__title)}>Open Source</span>
@@ -132,6 +133,7 @@ const LoginView: FC<{}> = ({}) => {
             className={cn("flex flex-col col-span-3", s.perkCard)}
             href="https://www.speakeasy.tech/how-it-works/"
             target="_blank"
+            rel="noreferrer"
           >
             <NormalHash />
             <span className={cn(s.perkCard__title)}>
@@ -145,6 +147,7 @@ const LoginView: FC<{}> = ({}) => {
             className={cn("flex flex-col col-span-3", s.perkCard)}
             href="https://www.speakeasy.tech/roadmap/"
             target="_blank"
+            rel="noreferrer"
           >
             <RoadMap />
             <span className={cn(s.perkCard__title)}>Roadmap</span>
