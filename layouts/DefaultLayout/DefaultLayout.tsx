@@ -54,53 +54,53 @@ const DefaultLayout: FC<Props> = ({
     getNickName
   } = useNetworkClient();
 
-  useEffect(() => {
-    if (!utilsLoaded) {
-      const go = new (window as any).Go();
-      const binPath = "/integrations/assets/xxdk.wasm";
-      WebAssembly?.instantiateStreaming(fetch(binPath), go.importObject).then(
-        async (result: any) => {
-          go?.run(result?.instance);
-          const {
-            NewCmix,
-            GenerateChannel,
-            LoadCmix,
-            GetChannelInfo,
-            GenerateChannelIdentity,
-            GetDefaultCMixParams,
-            NewChannelsManagerWithIndexedDb,
-            Base64ToUint8Array,
-            LoadChannelsManagerWithIndexedDb,
-            GetPublicChannelIdentityFromPrivate,
-            IsNicknameValid,
-            LogToFile,
-            LogLevel
-          } = (window as any) || {};
+  // useEffect(() => {
+  //   if (!utilsLoaded) {
+  //     const go = new (window as any).Go();
+  //     const binPath = "/integrations/assets/xxdk.wasm";
+  //     WebAssembly?.instantiateStreaming(fetch(binPath), go.importObject).then(
+  //       async (result: any) => {
+  //         go?.run(result?.instance);
+  //         const {
+  //           NewCmix,
+  //           GenerateChannel,
+  //           LoadCmix,
+  //           GetChannelInfo,
+  //           GenerateChannelIdentity,
+  //           GetDefaultCMixParams,
+  //           NewChannelsManagerWithIndexedDb,
+  //           Base64ToUint8Array,
+  //           LoadChannelsManagerWithIndexedDb,
+  //           GetPublicChannelIdentityFromPrivate,
+  //           IsNicknameValid,
+  //           LogToFile,
+  //           LogLevel
+  //         } = (window as any) || {};
 
-          setUtils({
-            NewCmix,
-            GenerateChannel,
-            LoadCmix,
-            GetChannelInfo,
-            GenerateChannelIdentity,
-            GetDefaultCMixParams,
-            NewChannelsManagerWithIndexedDb,
-            Base64ToUint8Array,
-            LoadChannelsManagerWithIndexedDb,
-            GetPublicChannelIdentityFromPrivate,
-            IsNicknameValid
-          });
+  //         setUtils({
+  //           NewCmix,
+  //           GenerateChannel,
+  //           LoadCmix,
+  //           GetChannelInfo,
+  //           GenerateChannelIdentity,
+  //           GetDefaultCMixParams,
+  //           NewChannelsManagerWithIndexedDb,
+  //           Base64ToUint8Array,
+  //           LoadChannelsManagerWithIndexedDb,
+  //           GetPublicChannelIdentityFromPrivate,
+  //           IsNicknameValid
+  //         });
 
-          if (LogLevel) {
-            LogLevel(2);
-          }
-          const logFile = LogToFile(0, "receiver.log", 5000000);
-          (window as any).logFile = logFile;
-          setUtilsLoaded(true);
-        }
-      );
-    }
-  }, [utilsLoaded]);
+  //         if (LogLevel) {
+  //           LogLevel(2);
+  //         }
+  //         const logFile = LogToFile(0, "receiver.log", 5000000);
+  //         (window as any).logFile = logFile;
+  //         setUtilsLoaded(true);
+  //       }
+  //     );
+  //   }
+  // }, [utilsLoaded]);
 
   useEffect(() => {}, []);
   const ModalView: FC<{ modalView: string; closeModal(): any }> = ({
@@ -134,20 +134,7 @@ const DefaultLayout: FC<Props> = ({
 
   return (
     <div className={cn(s.root)}>
-      {utilsLoaded ? (
-        network && isAuthenticated && getStorageTag() ? (
-          <>
-            <LeftSideBar cssClasses={s.leftSideBar} />
-            <main className="">{children}</main>
-            <RightSideBar cssClasses={s.rightSideBar} />
-            <ModalUI />
-          </>
-        ) : (
-          <AuthenticationUI />
-        )
-      ) : (
-        <Loading />
-      )}
+      <AuthenticationUI />
     </div>
   );
 };
