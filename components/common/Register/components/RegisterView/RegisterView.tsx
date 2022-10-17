@@ -42,15 +42,26 @@ const RegisterView: FC<{
             </span>
           </div>
           <div className="col-span-3 pl-3">
-            <h2 className="mb-2">Join the alpha</h2>
+            <h1
+              style={{
+                color: "#ECBA5F",
+                textAlign: "center",
+                fontSize: "48px",
+                marginTop: "72px"
+              }}
+            >
+              Coming <br />
+              soon...
+            </h1>
+            {/* <h2 className="mb-2">Join the alpha</h2> */}
 
-            <p
+            {/* <p
               className="mb-8 text"
               style={{ color: "#5B5D62", lineHeight: "17px" }}
             >
               Enter a password to secure your soverign speakeasy identity
-            </p>
-            <input
+            </p> */}
+            {/* <input
               type="password"
               placeholder="Enter your password"
               className=""
@@ -58,9 +69,9 @@ const RegisterView: FC<{
               onChange={e => {
                 setPassword(e.target.value);
               }}
-            />
+            /> */}
 
-            <input
+            {/* <input
               type="password"
               placeholder="Confirm your password"
               className="mt-4"
@@ -68,15 +79,15 @@ const RegisterView: FC<{
               onChange={e => {
                 setPasswordConfirm(e.target.value);
               }}
-            />
-            {error && (
+            /> */}
+            {/* {error && (
               <div
                 className={"text text--xs mt-4"}
                 style={{ color: "var(--red)" }}
               >
                 {error}
               </div>
-            )}
+            )} */}
 
             {/* <div
             style={{
@@ -94,7 +105,7 @@ const RegisterView: FC<{
             sure to keep it safe.
           </div> */}
 
-            <div className="flex flex-col mt-4">
+            {/* <div className="flex flex-col mt-4">
               <ModalCtaButton
                 buttonCopy="Continue"
                 cssClass={s.button}
@@ -109,18 +120,28 @@ const RegisterView: FC<{
                   }
                 }}
               />
-            </div>
+            </div> */}
           </div>
         </div>
         <div className={cn("grid grid-cols-12 gap-0", s.footer)}>
-          <div className={cn("flex flex-col col-span-3", s.perkCard)}>
+          <a
+            className={cn("flex flex-col col-span-3", s.perkCard)}
+            href="https://www.speakeasy.tech/open-source/"
+            target="_blank"
+            rel="noreferrer"
+          >
             <OpenSource />
             <span className={cn(s.perkCard__title)}>Open Source</span>
             <span className={cn(s.perkCard__description)}>
               Every line — open source. Forever.
             </span>
-          </div>
-          <div className={cn("flex flex-col col-span-3", s.perkCard)}>
+          </a>
+          <a
+            className={cn("flex flex-col col-span-3", s.perkCard)}
+            href="https://www.speakeasy.tech/how-it-works/"
+            target="_blank"
+            rel="noreferrer"
+          >
             <NormalHash />
             <span className={cn(s.perkCard__title)}>
               Fundamentally Different
@@ -128,18 +149,23 @@ const RegisterView: FC<{
             <span className={cn(s.perkCard__description)}>
               Powered by the first decentralized mixnet-blockchain
             </span>
-          </div>
-          <div className={cn("flex flex-col col-span-3", s.perkCard)}>
+          </a>
+          <a
+            className={cn("flex flex-col col-span-3", s.perkCard)}
+            href="https://www.speakeasy.tech/roadmap/"
+            target="_blank"
+            rel="noreferrer"
+          >
             <RoadMap />
             <span className={cn(s.perkCard__title)}>Roadmap</span>
             <span className={cn(s.perkCard__description)}>
               Building to the future
             </span>
-          </div>
+          </a>
           <div className={cn("flex flex-col col-span-3", s.perkCard)}>
             <Chat />
             <span className={cn(s.perkCard__title)}>
-              Join the discussion on the official feedback speakeasy
+              Join the discussion on the official feedback speakeasy (SOON)
             </span>
           </div>
         </div>
