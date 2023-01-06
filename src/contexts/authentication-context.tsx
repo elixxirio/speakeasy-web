@@ -7,6 +7,7 @@ import useLocalStorage from 'src/hooks/useLocalStorage';
 
 type AuthenticationContextType = {
   checkUser: (password: string) => Uint8Array | false;
+  register: (password: string) => Uint8Array;
   statePathExists: () => boolean;
   getStorageTag: () => string | null;
   addStorageTag: (tag: string) => void;
@@ -38,10 +39,16 @@ export const AuthenticationProvider: FC<WithChildren> = (props) => {
     }
   }, [utils]);
 
+  const register = useCallback(
+    (password: string) => utils.GetOrInitPassword(password),
+    [utils]
+  )
+
   return (
     <AuthenticationContext.Provider
       value={{
         checkUser,
+        register,
         statePathExists,
         getStorageTag: () => storageTags?.[0] || null,
         addStorageTag: (tag: string) => setStorageTags((storageTags ?? []).concat(tag)),

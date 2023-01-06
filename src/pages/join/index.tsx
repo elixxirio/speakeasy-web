@@ -90,7 +90,6 @@ const Join: NextPage = () => {
 
   return withLink ? (
     isUserAuthenticated ? (
-      // Public channel
       <>
         {channelInfoJson && window?.location?.href && (
           <JoinChannelView

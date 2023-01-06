@@ -18,8 +18,8 @@ const LoginView: FC = ({}) => {
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
   const {
+    cmix,
     loadChannelManager,
-    loadCmix,
     setIsReadyToRegister
   } = useNetworkClient();
   const { checkUser, getStorageTag } = useAuthentication();
@@ -32,13 +32,13 @@ const LoginView: FC = ({}) => {
   const handleSubmit = useCallback(async () => {
     setError('');
     setIsLoading(true);
-    const statePassEncoded = checkUser(password);
-    if (!statePassEncoded) {
+    const decryptedPassword = checkUser(password);
+    if (!decryptedPassword) {
       setError('Incorrect password');
       setIsLoading(false);
     } else {
       setTimeout(async () => {
-        const cmix = await loadCmix(statePassEncoded);
+        await cmix?.initiate(decryptedPassword);
         const tag = getStorageTag();
         if (tag) {
           loadChannelManager(tag, cmix);
@@ -48,9 +48,9 @@ const LoginView: FC = ({}) => {
     }
   }, [
     checkUser,
+    cmix,
     getStorageTag,
     loadChannelManager,
-    loadCmix,
     password
   ]);
 

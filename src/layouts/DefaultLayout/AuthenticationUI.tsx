@@ -13,9 +13,10 @@ import { useNetworkClient } from '@contexts/network-client-context';
 
 const AuthenticationUI: FC = () => {
   const { displayModal, modalView = '' } = useUI();
-  const { getStorageTag, statePathExists } = useAuthentication();
+  const { getStorageTag, register, statePathExists } = useAuthentication();
   const { utils } = useUtils(); 
-  const { checkRegistrationReadiness, cmix, initiateCmix, setIsReadyToRegister } = useNetworkClient();
+  const { checkRegistrationReadiness, cmix, setIsReadyToRegister } = useNetworkClient();
+  const { initiate: initateCmix } = cmix;
   const [loading, setLoading] = useState(false); 
   const [readyProgress, setReadyProgress] = useState<number>(0);
   const hasAccount = statePathExists() && getStorageTag();
@@ -27,8 +28,9 @@ const AuthenticationUI: FC = () => {
       setIsReadyToRegister(false);
       const imported = utils.ImportPrivateIdentity(password, encoder.encode(identity));
       setImportedIdentity(imported);
-      await initiateCmix(password);
-  }, [initiateCmix, setIsReadyToRegister, utils]);
+      const internalPassword = register(password);
+      await initateCmix(internalPassword);
+  }, [initateCmix, register, setIsReadyToRegister, utils]);
 
   useEffect(() => {
     if (cmix && importedIdentity) {
