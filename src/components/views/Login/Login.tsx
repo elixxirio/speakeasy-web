@@ -55,7 +55,7 @@ const LoginView: FC = ({}) => {
   ]);
 
   return (
-    <div className={cn('', s.root)}>
+    <div className={cn(s.root)}>
       <div className={cn('w-full flex flex-col', s.wrapper)}>
         <div className={cn(s.header)}>
           <NormalSpeakeasy />

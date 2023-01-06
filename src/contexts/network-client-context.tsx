@@ -1,7 +1,6 @@
 import { ChannelJSON, DummyTraffic, MessageReceivedCallback } from 'src/contexts/utils-context';
-import React, { FC, useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { FC, useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
 
-import { Dexie } from 'dexie';
 import _ from 'lodash';
 import Cookies from 'js-cookie';
 import assert from 'assert';
@@ -14,8 +13,9 @@ import { ndf } from 'src/sdk-utils/ndf';
 import { PIN_MESSAGE_LENGTH_MILLISECONDS, STATE_PATH } from '../constants';
 import useNotification from 'src/hooks/useNotification';
 import usePrevious from 'src/hooks/usePrevious';
+import { DBContext } from './db-context';
 
-const batchCount = 100;
+const BATCH_COUNT = 100;
 
 enum DBMessageType {
   Normal = 1,
@@ -177,22 +177,6 @@ export type IdentityJSON = {
 
 type MessageEvent = { id: string; handled: boolean; isUpdate: boolean };
 
-let db: Dexie | undefined;
-let storageTag: string;
-
-const initDb = (tag = storageTag) => {
-  if (!tag) { return; }
-  storageTag = tag;
-  db = new Dexie(`${tag}_speakeasy`);
-  db.version(0.1).stores({
-    channels: '++id',
-    messages:
-      '++id,channel_id,&message_id,parent_message_id,pinned,timestamp'
-  });
-
-  return db;
-}
-
 type NetworkContext = {
   // state
   bannedUsers: User[] | undefined;
@@ -287,6 +271,7 @@ const savePrettyPrint = (channelId: string, prettyPrint: string) => {
 };
 
 export const NetworkProvider: FC<WithChildren> = props => {
+  const { db } = useContext(DBContext);
   const {
     addStorageTag,
     setIsAuthenticated,
@@ -475,8 +460,6 @@ export const NetworkProvider: FC<WithChildren> = props => {
   }, [connectNetwork, cmix, networkStatus, setIsAuthenticated]);
 
   const mapDbMessagesToMessages = useCallback(async (msgs: DBMessage[]) => {
-    initDb();
-
     if (!db || !(cipherRef && cipherRef.current)) {
       return [];
     } else {
@@ -583,7 +566,7 @@ export const NetworkProvider: FC<WithChildren> = props => {
       });
       return mappedMessages;
     }
-  }, [getCodeNameAndColor, utils]);
+  }, [db, getCodeNameAndColor, utils]);
 
   const handleReactionReceived = useCallback((dbMessage: DBMessage) => {
     setMessages((prevMessages) => {
@@ -812,6 +795,7 @@ export const NetworkProvider: FC<WithChildren> = props => {
   }, [
     channelIdentity?.PubKey,
     checkIfWillResolveBlockedEvent,
+    db,
     getCodeNameAndColor,
     handleReactionReceived,
     mapDbMessagesToMessages,
@@ -921,13 +905,12 @@ export const NetworkProvider: FC<WithChildren> = props => {
     } else {
       return [];
     }
-  }, []);
+  }, [db]);
 
-  const handleInitialLoadData = useCallback(async (tag: string, manager: ChannelManager) => {
-    db = initDb(tag);
-
-    assert(db);
-
+  const handleInitialLoadData = useCallback(async () => {
+    assert(db, 'DB needs to be initialized');
+    assert(channelManager, 'Needs manager');
+    
     const fetchedChannels = await db.table<DBChannel>('channels').toArray();
 
     const channelsIds = fetchedChannels.map(ch => ch.id);
@@ -944,7 +927,7 @@ export const NetworkProvider: FC<WithChildren> = props => {
           .filter(m => {
             return !m.hidden && m.channel_id === chId && m.type === 1;
           })
-          .limit(batchCount)
+          .limit(BATCH_COUNT)
           .toArray();
       })
     );
@@ -973,7 +956,7 @@ export const NetworkProvider: FC<WithChildren> = props => {
       mappedChannels.map((ch: DBChannel) => {
         return {
           ...ch,
-          isAdmin: manager.IsChannelAdmin(utils.Base64ToUint8Array(ch.id)),
+          isAdmin: channelManager.IsChannelAdmin(utils.Base64ToUint8Array(ch.id)),
           currentMessagesBatch: 1
         };
       })
@@ -981,9 +964,11 @@ export const NetworkProvider: FC<WithChildren> = props => {
 
     setMessages(messagesWithReactions);
   }, [
-    bulkUpdateMessagesWithReactions,
-    getDBReactionEvents,
+    db,
+    channelManager,
     mapInitialLoadDataToCurrentState,
+    getDBReactionEvents,
+    bulkUpdateMessagesWithReactions,
     utils
   ]);
 
@@ -1005,7 +990,6 @@ export const NetworkProvider: FC<WithChildren> = props => {
         );
 
       setChannelManager(loadedChannelsManager);
-      handleInitialLoadData(tag, loadedChannelsManager);
     }
   };
 
@@ -1026,15 +1010,14 @@ export const NetworkProvider: FC<WithChildren> = props => {
       setChannelManager(createdChannelManager);
       const tag = createdChannelManager.GetStorageTag();
       addStorageTag(tag);
-      handleInitialLoadData(tag, createdChannelManager);
     }
-  }, [
-    addStorageTag,
-    handleInitialLoadData,
-    cmix,
-    addEventToQueue,
-    utils
-  ]);
+  }, [addStorageTag, cmix, addEventToQueue, utils]);
+
+  useEffect(() => {
+    if (db && channelManager) {
+      handleInitialLoadData();
+    }
+  }, [channelManager, db, handleInitialLoadData])
 
   // Used directly on Login
   const loadCmix = useCallback(async (statePassEncoded: Uint8Array) => {
@@ -1124,8 +1107,8 @@ export const NetworkProvider: FC<WithChildren> = props => {
         .filter(m => {
           return !m.hidden && m.channel_id === chId && m.type === 1;
         })
-        .offset(currentChannelBatch * batchCount)
-        .limit(batchCount)
+        .offset(currentChannelBatch * BATCH_COUNT)
+        .limit(BATCH_COUNT)
         .toArray();
 
       const result = await mapInitialLoadDataToCurrentState([], newMessages);
@@ -1161,6 +1144,7 @@ export const NetworkProvider: FC<WithChildren> = props => {
   }, [
     bulkUpdateMessagesWithReactions,
     channels,
+    db,
     getDBReactionEvents,
     mapInitialLoadDataToCurrentState
   ]);
@@ -1534,7 +1518,6 @@ export const NetworkProvider: FC<WithChildren> = props => {
   }, [channelManager, utils]);
 
   const getBannedUsers = useCallback(async () => {
-    initDb();
     let users: User[] = [];
 
     if (currentChannel && channelManager && db) {
@@ -1563,7 +1546,7 @@ export const NetworkProvider: FC<WithChildren> = props => {
     }
 
     return users;
-  }, [channelManager, currentChannel, getCodeNameAndColor, utils]);
+  }, [channelManager, currentChannel, db, getCodeNameAndColor, utils]);
 
   useEffect(() => {
     getBannedUsers();
@@ -1600,7 +1583,7 @@ export const NetworkProvider: FC<WithChildren> = props => {
       return fetchedPinnedMessages;
     }
     return [];
-  }, [currentChannel, mapDbMessagesToMessages]);
+  }, [currentChannel, db, mapDbMessagesToMessages]);
 
   const getMuted = useCallback(() => {
     if (currentChannel && channelManager) {
