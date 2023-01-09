@@ -38,12 +38,14 @@ export type XXDKUtils = {
   GenerateChannelIdentity: (cmixId: number) => Uint8Array;
   NewChannelsManagerWithIndexedDb: (
     cmidId: number,
+    wasmJsPath: string,
     privateIdentity: Uint8Array,
     onMessage: MessageReceivedCallback,
     channelDbCipher: number
   ) => Promise<ChannelManager>;
   LoadChannelsManagerWithIndexedDb: (
     cmixId: number,
+    wasmJsPath: string,
     storageTag: string,
     onMessage: MessageReceivedCallback,
     channelDbCipher: number

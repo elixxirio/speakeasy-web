@@ -999,6 +999,7 @@ export const NetworkProvider: FC<WithChildren> = props => {
       const loadedChannelsManager = await utils
         .LoadChannelsManagerWithIndexedDb(
           currentNetwork.GetID(),
+          '/integrations/assets/channelsIndexedDbWorker.js',
           tag,
           addEventToQueue,
           cipherRef?.current?.GetID()
@@ -1018,6 +1019,7 @@ export const NetworkProvider: FC<WithChildren> = props => {
     ) {
       const createdChannelManager = await utils.NewChannelsManagerWithIndexedDb(
         cmix.GetID(),
+        '/integrations/assets/channelsIndexedDbWorker.js',
         privateIdentity,
         addEventToQueue,
         cipherRef?.current?.GetID()
