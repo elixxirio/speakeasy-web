@@ -30,6 +30,7 @@ import {
 } from 'src/components/modals';
 
 import s from './DefaultLayout.module.scss';
+import { NetworkStatus } from 'src/hooks/useCmix';
 
 const AuthenticatedUserModals: FC<{ currentChannel?: Channel }> = ({
   currentChannel
@@ -94,7 +95,7 @@ const DefaultLayout: FC<WithChildren> = ({
     if (
       privacyLevel !== null &&
       cmix &&
-      isNetworkHealthy &&
+      cmix.status === NetworkStatus.CONNECTED &&
       isAuthenticated &&
       getStorageTag() &&
       isReadyToRegister &&

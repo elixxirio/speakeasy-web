@@ -174,9 +174,7 @@ type NetworkContext = {
   messages: Message[];
   cmix: ReturnType<typeof useCmix>;
   currentChannel?: Channel;
-  isNetworkHealthy: boolean | undefined;
-  isReadyToRegister: boolean | undefined;
-  networkStatus: NetworkStatus;
+  isReadyToRegister: boolean | undefined
   channelIdentity: IdentityJSON | null;
   pinnedMessages?: Message[];
   // api
@@ -184,7 +182,6 @@ type NetworkContext = {
     selectedPrivateIdentity: Uint8Array,
     onIsReadyInfoChange: (readinessInfo: IsReadyInfo) => void
   ) => Promise<void>;
-  connectNetwork: () => Promise<void>;
   createChannel: (
     channelName: string,
     channelDescription: string,
@@ -204,9 +201,7 @@ type NetworkContext = {
   mapDbMessagesToMessages: (messages: DBMessage[]) => Promise<Message[]>;
   muteUser: (pubkey: string, unmute: boolean) => Promise<void>;
   setMessages: (messages: Message[]) => void;
-  setNetworkStatus: (status: NetworkStatus) => void;
   setCurrentChannel: (channel: Channel) => void;
-  shareChannel: () => void;
   sendMessage: (message: string) => void;
   leaveCurrentChannel: () => void;
   createChannelManager: (privateIdentity: Uint8Array) => Promise<void>;
@@ -651,15 +646,15 @@ export const NetworkProvider: FC<WithChildren> = props => {
     if (db) {
       const receivedMessage = await db.table<DBMessage>('messages').get(id);
 
-      if (receivedMessage?.hidden === true) {
-        return;
-      }
-
       if (isUpdate && receivedMessage) {
         if ([1, 2, 3].includes(receivedMessage.status)) {
           updateSenderMessageStatus(receivedMessage);
           return;
         }
+      }
+
+      if (receivedMessage?.hidden === true) {
+        return;
       }
 
       if (receivedMessage?.parent_message_id
