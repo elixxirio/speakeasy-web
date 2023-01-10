@@ -1,4 +1,5 @@
-import { CMix, useUtils } from '@contexts/utils-context';
+import type { CMix } from 'src/types'
+import { useUtils } from '@contexts/utils-context';
 import { decoder } from '@utils/index';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { STATE_PATH } from 'src/constants';
