@@ -146,7 +146,7 @@ export type ChannelManager = {
     cmixParams: Uint8Array
   ) => Promise<Uint8Array>;
   IsChannelAdmin: (channelId: Uint8Array) => boolean;
-  GenerateChannel: (channelname: string, description: string, privacyLevel: PrivacyLevel) => string;
+  GenerateChannel: (channelname: string, description: string, privacyLevel: PrivacyLevel) => Promise<string>;
   GetStorageTag: () => string;
   SetNickname: (newNickname: string, channel: Uint8Array) => void;
   GetNickname: (channel: Uint8Array) => string;
@@ -1076,7 +1076,7 @@ export const NetworkProvider: FC<WithChildren> = props => {
                 dummyTrafficObjRef.current &&
                 !dummyTrafficObjRef?.current?.GetStatus()
               ) {
-                dummyTrafficObjRef?.current?.SetStatus(true);
+                dummyTrafficObjRef?.current?.Start();
               }
             } else {
               setIsNetworkHealthy(false);
@@ -1099,7 +1099,7 @@ export const NetworkProvider: FC<WithChildren> = props => {
       // Check if state exists
       if (!statePathExists()) {
         // setStatePath('Test');
-        utils.NewCmix(ndf, STATE_PATH, statePassEncoded, '');
+        await utils.NewCmix(ndf, STATE_PATH, statePassEncoded, '');
       }
 
       await loadCmix(statePassEncoded);
@@ -1222,13 +1222,13 @@ export const NetworkProvider: FC<WithChildren> = props => {
   }, [utils]);
 
 
-  const createChannel = useCallback((
+  const createChannel = useCallback(async (
     channelName: string,
     channelDescription: string,
     privacyLevel: PrivacyLevel.Public | PrivacyLevel.Secret
   ) => {
       if (cmix && channelName && channelManager) {
-        const channelPrettyPrint = channelManager?.GenerateChannel(
+        const channelPrettyPrint = await channelManager?.GenerateChannel(
           channelName,
           channelDescription || '',
           privacyLevel,
