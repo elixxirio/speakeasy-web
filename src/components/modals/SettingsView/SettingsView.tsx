@@ -16,13 +16,13 @@ const SettingsView: FC = () => {
         <div>
           <h3 className='headline--sm'>Download logs</h3>
           <Download
-            onClick={() => {
-              if (!window.logFile) {
+            onClick={async () => {
+              if (!window.logFileWorker) {
                 throw new Error('Log file required')
               }
 
-              const filename = window.logFile.Name();
-              const data = window.logFile.GetFile();
+              const filename = 'xxdk.log';
+              const data = await window.logFileWorker.GetFile();
               const file = new Blob([data], { type: 'text/plain' });
               const a = document.createElement('a'),
                 url = URL.createObjectURL(file);

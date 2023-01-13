@@ -4,11 +4,19 @@ import { FC, useEffect } from 'react';
 
 import { useUtils } from 'src/contexts/utils-context';
 
-type LogFile = { Name: () => string, GetFile: () => string };
+type LogFileWorker = {
+  Threshold: () => number,
+  GetFile: () => Promise<string>,
+  MaxSize: () => number,
+  Size: () => Promise<number>,
+  Worker: () => Worker,
+};
 declare global {
   interface Window {
-    LogToFile: (level: number, path: string, maxLogFileSizeBytes: number) => LogFile;
-    logFile?: LogFile;
+    LogToFileWorker: (wasmJsPath: string, name: string, level: number,
+                      maxLogFileSizeBytes: number) => LogFileWorker;
+    logFileWorker?: LogFileWorker;
+    getCrashedLogFile: () => Promise<string>;
   }
 }
 
@@ -51,7 +59,7 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } = (window as any) || {};
 
-          const { LogToFile } = window;
+          const { LogToFileWorker } = window;
 
           setUtils({
             NewCmix,
@@ -82,9 +90,27 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
           if (LogLevel) {
             LogLevel(2);
           }
-          
-          const logFile = LogToFile(0, 'receiver.log', 5000000);
-          window.logFile = logFile;
+
+          // LogToFileWorker is a WASM function that returns a new object that
+          // manages the log file worker
+          const logFileWorker = await LogToFileWorker(
+            'integrations/assets/logFileWorker.js', 'xxdkLogFileWorker',
+            1,5000000);
+          window.logFileWorker = logFileWorker;
+
+
+          // Get the actual Worker object from the log file object
+          const w = logFileWorker.Worker()
+
+          window.getCrashedLogFile = () => {
+            return new Promise((resolve) => {
+              w.addEventListener('message', ev => {
+                resolve(atob(JSON.parse(ev.data).data))
+              })
+              w.postMessage(JSON.stringify({ tag: 'GetFileExt'}))
+            });
+          };
+
           setUtilsLoaded(true);
         }
       );
