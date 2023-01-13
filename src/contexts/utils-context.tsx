@@ -41,6 +41,7 @@ export type XXDKUtils = {
   GenerateChannelIdentity: (cmixId: number) => Uint8Array;
   NewChannelsManagerWithIndexedDb: (
     cmidId: number,
+    wasmJsPath: string,
     privateIdentity: Uint8Array,
     onMessage: MessageReceivedCallback,
     onDelete: MessageDeletedCallback,
@@ -50,6 +51,7 @@ export type XXDKUtils = {
   LoadChannelsManagerWithIndexedDb: (
     cmixId: number,
     storageTag: string,
+    wasmJsPath: string,
     onMessage: MessageReceivedCallback,
     onDelete: MessageDeletedCallback,
     onMuted: UserMutedCallback,
