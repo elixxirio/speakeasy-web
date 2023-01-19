@@ -7,10 +7,37 @@ import {
 
 import { Elixxir, SpeakEasy, Settings, Plus, MissedMessagesIcon, NetworkStatusIcon  } from 'src/components/icons';
 import { useUI } from 'src/contexts/ui-context';
-import { useNetworkClient } from 'src/contexts/network-client-context';
+import { Channel, useNetworkClient } from 'src/contexts/network-client-context';
 import useToggle from 'src/hooks/useToggle';
 
 import s from './LeftSideBar.module.scss';
+
+const ChannelPill: FC<{ channel: Channel, onSelect: (id: string) => void  }> = ({ channel, onSelect }) => {
+  const { currentChannel } = useNetworkClient();
+
+  const handleSelect = useCallback(() => {
+    onSelect(channel.id);
+  }, [channel.id, onSelect]);
+
+  return (
+  <div className='flex justify-between items-center' key={channel.id}>
+    <span
+      title={channel.isAdmin ? 'You are admin in this channel' : undefined}
+      className={cn(s.channelPill, 'headline--xs', {
+        [s.channelPill__active]:
+          channel.id === (currentChannel?.id || '')
+      })}
+      onClick={handleSelect}
+    >
+      {channel.name}
+    </span>
+    {channel.withMissedMessages && (
+      <span className='mr-2'>
+        <MissedMessagesIcon></MissedMessagesIcon>
+      </span>
+    )}
+    </div>);
+}
 
 const LeftSideBar: FC<{
   cssClasses?: string;
@@ -19,7 +46,6 @@ const LeftSideBar: FC<{
 
   const {
     channels,
-    currentChannel,
     getClientVersion,
     getIdentity,
     getVersion,
@@ -29,7 +55,7 @@ const LeftSideBar: FC<{
   const codename = getIdentity()?.Codename;
   const color = getIdentity()?.Color.replace('0x', '#');;
 
-  const onChannelChange = useCallback((chId: string) => () => {
+  const onChannelChange = useCallback((chId: string) => {
     const selectedChannel = channels.find(ch => ch.id === chId);
     if (selectedChannel) {
       setCurrentChannel(selectedChannel);
@@ -50,9 +76,12 @@ const LeftSideBar: FC<{
   const [showCreateNewChannel, { toggle: toggleChannelCreationMenu, toggleOff: hideMenu }] = useToggle();
   useOnClickOutside(dropdownRef, hideMenu);
 
-  const collapseTitle = useMemo(() => (
+  const adminChannels = useMemo(() => channels.filter((ch) => ch.isAdmin), [channels]);
+  const nonAdminChannels = useMemo(() => channels.filter((ch) => !ch.isAdmin), [channels]);
+
+  const adminChannelsTitle = useMemo(() => (
     <div className={cn('flex justify-between')}>
-      <span>JOINED</span>
+      <span>Admin</span>
       <div className='flex items-center'>
         <Plus
           className={cn('mr-1', s.plus, {})}
@@ -64,10 +93,15 @@ const LeftSideBar: FC<{
             toggleChannelCreationMenu();
           }}
         />
-        
       </div>
     </div>
   ), [toggleChannelCreationMenu]);
+
+  const joinedChannelsTitle = useMemo(() => (
+    <div className={cn('flex justify-between')}>
+      <span>Joined</span>
+    </div>
+  ), []);
 
   return (
     <div className={cn(s.root, cssClasses)}>
@@ -80,7 +114,9 @@ const LeftSideBar: FC<{
       <div className={cn(s.content, 'relative')}>
         {showCreateNewChannel && (
           <div ref={dropdownRef} className='absolute p-2 w-full  left-0 mt-6'>
-            <ul style={{ backgroundColor: 'var(--dark-2)', zIndex: 2 }} className='text-right w-full rounded-lg p-2 bold'>
+            <ul
+              style={{ backgroundColor: 'var(--dark-2)', zIndex: 2 }}
+              className='text-right w-full rounded-lg p-2 bold'>
               <li className='px-2 py-1'>
                 <button className='underline' onClick={() => {
                   setModalView('CREATE_CHANNEL');
@@ -102,28 +138,18 @@ const LeftSideBar: FC<{
             </ul>
           </div>
         )}
-        <Collapse title={collapseTitle} defaultActive>
+        <Collapse title={adminChannelsTitle} defaultActive>
           <div className='flex flex-col'>
-            {sortedChannels.map((ch) => (
-              <div className='flex justify-between items-center' key={ch.id}>
-                <span
-                  title={ch.isAdmin ? 'You are admin in this channel' : undefined}
-                  className={cn(s.channelPill, 'headline--xs', {
-                    [s.channelPill__active]:
-                      ch.id === (currentChannel?.id || '')
-                  })}
-                  onClick={onChannelChange(ch.id)}
-                >
-                  {ch.name}
-                </span>
-                {ch.withMissedMessages && (
-                  <span className='mr-2'>
-                    <MissedMessagesIcon></MissedMessagesIcon>
-                  </span>
-                )}
-              </div>
-            )
-          )}
+            {adminChannels.map((ch) => (
+              <ChannelPill key={ch.id}  channel={ch} onSelect={onChannelChange} />
+            ))}
+          </div>
+        </Collapse>
+        <Collapse title={joinedChannelsTitle} defaultActive>
+          <div className='flex flex-col'>
+            {nonAdminChannels.map((ch) => (
+              <ChannelPill key={ch.id}  channel={ch} onSelect={onChannelChange} />
+            ))}
           </div>
         </Collapse>
       </div>

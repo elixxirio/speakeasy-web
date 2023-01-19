@@ -1,18 +1,25 @@
 .root {
-  @apply flex flex-col outline-none;
+  display: flex;
+  flex-direction: column;
+
+  &:not(:last-child) {
+    margin-bottom: 1rem;
+  }
 }
 
 .header {
-  @apply flex flex-row items-center;
+  display: flex;
+  align-items: center;
   color: var(--grey);
 }
 
 .content {
-  @apply pt-3 overflow-hidden;
+  overflow: hidden;
 }
 
 .icon {
-  @apply mr-1;
+  margin-top: 0.1rem;
+  margin-right: 0.25rem;
   transition: transform 0.2s ease;
 }
 
