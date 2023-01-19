@@ -10,6 +10,7 @@ import Identity from 'src/components/common/Identity';
 
 import s from './ChatMessage.module.scss';
 import ChatReactions from '../ChatReactions';
+import { Pin } from '@components/icons';
 
 const mapTextToHtmlWithAnchors = (text: string) => {
   const withLinks = text.replace(
@@ -51,6 +52,7 @@ const ChatMessage: FC<Props> = (props) => {
     >
 
       <div className={cn('flex flex-col', s.messageWrapper)}>
+        
         <div className={cn(s.header)}>
           {message.repliedTo !== null ? (
             <>
@@ -84,6 +86,10 @@ const ChatMessage: FC<Props> = (props) => {
           >
             Show mix
           </a>
+
+          {!clamped && message.pinned && (
+            <Pin className='inline ml-2 h-3' />
+          )}
         </div>
 
         <div className={cn(s.body)}>
