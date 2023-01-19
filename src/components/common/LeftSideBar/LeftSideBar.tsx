@@ -76,8 +76,8 @@ const LeftSideBar: FC<{
   const [showCreateNewChannel, { toggle: toggleChannelCreationMenu, toggleOff: hideMenu }] = useToggle();
   useOnClickOutside(dropdownRef, hideMenu);
 
-  const adminChannels = useMemo(() => channels.filter((ch) => ch.isAdmin), [channels]);
-  const nonAdminChannels = useMemo(() => channels.filter((ch) => !ch.isAdmin), [channels]);
+  const adminChannels = useMemo(() => sortedChannels.filter((ch) => ch.isAdmin), [sortedChannels]);
+  const nonAdminChannels = useMemo(() => sortedChannels.filter((ch) => !ch.isAdmin), [sortedChannels]);
 
   const adminChannelsTitle = useMemo(() => (
     <div className={cn('flex justify-between')}>
