@@ -86,7 +86,6 @@ const ChatMessage: FC<Props> = (props) => {
           >
             Show mix
           </a>
-
           {!clamped && message.pinned && (
             <Pin className='inline ml-2 h-3' />
           )}
