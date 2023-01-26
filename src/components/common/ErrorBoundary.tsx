@@ -34,7 +34,6 @@ const ErrorComponent: FC<ErrorProps> = ({ resetErrorBoundary }) => {
   
   return (
     <div className='flex w-full h-screen content-center justify-center flex-col'>
-  
       <div className='text-center space-y-2'>
         <h2 className='mb-6'>Oops, something went wrong!</h2>
         <p className='space-x-4'>
@@ -49,7 +48,6 @@ const ErrorComponent: FC<ErrorProps> = ({ resetErrorBoundary }) => {
           </Button>
         </p>
       </div>
-
     </div>
   );
 };
