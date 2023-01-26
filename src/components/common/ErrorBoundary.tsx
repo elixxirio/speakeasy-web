@@ -4,12 +4,13 @@ import type { WithChildren } from 'src/types';
 import React, { useCallback } from 'react';
 import { ErrorBoundary as LibBoundary } from 'react-error-boundary';
 import { Download } from '@components/icons';
+import Button from './Button';
 
 type ErrorProps = {
   resetErrorBoundary: () => void;
 }
 
-const Error: FC<ErrorProps> = ({ resetErrorBoundary }) => {
+const ErrorComponent: FC<ErrorProps> = ({ resetErrorBoundary }) => {
   const exportLogs = useCallback(async () => {
     if (!window.getCrashedLogFile) {
       console.error('Log file required');
@@ -32,23 +33,33 @@ const Error: FC<ErrorProps> = ({ resetErrorBoundary }) => {
   }, []);
   
   return (
-  <div>
-    <h2>Oops, something went wrong!</h2>
-    <Download
-      onClick={exportLogs}
-    />
-    <button
-      type='button'
-      onClick={resetErrorBoundary}
-    >
-      Try again?
-    </button>
-  </div>
-)};
+    <div className='w-full h-screen content-center justify-center flex-col'>
+  
+      <div className='text-center space-y-2'>
+        <h2 className='mb-8'>Oops, something went wrong!</h2>
+        <p className='space-x-4'>
+          <Button>
+            Logs for the nerds
+              <Download height='1rem' className='inline'
+                onClick={exportLogs}
+            />
+          </Button>
+          <Button
+            type='button'
+            onClick={resetErrorBoundary}
+          >
+            Try again?
+          </Button>
+        </p>
+      </div>
+
+    </div>
+  );
+};
 
 const ErrorBoundary: FC<WithChildren> = ({ children }) => {
   return (
-    <LibBoundary FallbackComponent={Error}>
+    <LibBoundary FallbackComponent={ErrorComponent}>
       {children}
     </LibBoundary>
   );
