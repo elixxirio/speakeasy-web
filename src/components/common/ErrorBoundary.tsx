@@ -33,16 +33,13 @@ const ErrorComponent: FC<ErrorProps> = ({ resetErrorBoundary }) => {
   }, []);
   
   return (
-    <div className='w-full h-screen content-center justify-center flex-col'>
+    <div className='flex w-full h-screen content-center justify-center flex-col'>
   
       <div className='text-center space-y-2'>
-        <h2 className='mb-8'>Oops, something went wrong!</h2>
+        <h2 className='mb-6'>Oops, something went wrong!</h2>
         <p className='space-x-4'>
-          <Button>
-            Logs for the nerds
-              <Download height='1rem' className='inline'
-                onClick={exportLogs}
-            />
+          <Button onClick={exportLogs}>
+            Logs for the nerds <Download height='1rem' className='inline ml-1' />
           </Button>
           <Button
             type='button'
