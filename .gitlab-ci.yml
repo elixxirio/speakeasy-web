@@ -9,13 +9,31 @@ before_script:
   - chmod 700 ~/.ssh
 
 stages:
+  - container
   - deploy
+
+build_image:
+  image: docker:latest
+  stage: container
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  script:
+    - docker info
+    - docker build --build-arg SPEAKEASY_VER=$CI_COMMIT_REF_NAME --no-cache -t docker-registry.xx.network/elixxir/speakeasy-web:$CI_COMMIT_REF_NAME .
+    - docker push docker-registry.xx.network/elixxir/speakeasy-web:$CI_COMMIT_REF_NAME
+  only:
+    - staging
+    - dev
+    - backend-dev
+    - tags
+  tags:
+    - dind
 
 deploy_preprod:
   stage: deploy
   script:
-    - npm install
-    - npm run build
     - ssh -o StrictHostKeychecking=no maint@142.93.100.204 "sudo service speakeasy restart"
     - echo Redeployed http://stg.speakeasy.tech/
   only:
@@ -24,8 +42,6 @@ deploy_preprod:
 deploy_dev:
   stage: deploy
   script:
-    - npm install
-    - npm run build
     - ssh -o StrictHostKeychecking=no maint@167.71.42.39 "sudo service speakeasy restart"
     - echo Redeployed http://dev.speakeasy.tech/
   only:
@@ -34,8 +50,6 @@ deploy_dev:
 deploy_backdev:
   stage: deploy
   script:
-    - npm install
-    - npm run build
     - ssh -o StrictHostKeychecking=no maint@165.227.151.153 "sudo service speakeasy restart"
     - echo Redeployed http://backdev.speakeasy.tech/
   only:
