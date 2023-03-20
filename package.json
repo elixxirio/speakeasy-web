@@ -1,6 +1,6 @@
 {
   "name": "speakeasy-web",
-  "version": "0.2.9",
+  "version": "0.3.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -15,12 +15,16 @@
   "dependencies": {
     "@emoji-mart/data": "^1.0.6",
     "@emoji-mart/react": "^1.0.1",
+    "@fortawesome/fontawesome-svg-core": "^6.3.0",
+    "@fortawesome/free-solid-svg-icons": "^6.3.0",
+    "@fortawesome/react-fontawesome": "^0.2.0",
     "@juggle/resize-observer": "^3.4.0",
     "@react-spring/web": "^9.5.5",
     "@reduxjs/toolkit": "^1.9.1",
     "autoprefixer": "^10.4.8",
     "body-scroll-lock": "^4.0.0-beta.0",
     "classnames": "^2.3.1",
+    "contrast-color": "^1.0.1",
     "copy-to-clipboard": "^3.3.2",
     "delay": "^5.0.0",
     "dexie": "^3.2.2",
@@ -28,6 +32,8 @@
     "emoji-mart": "^5.2.2",
     "file-saver": "^2.0.5",
     "html-to-text": "^9.0.4",
+    "i18next": "^22.4.11",
+    "i18next-browser-languagedetector": "^7.0.1",
     "js-cookie": "^3.0.1",
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
@@ -42,6 +48,7 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-error-boundary": "^3.1.4",
+    "react-i18next": "^12.2.0",
     "react-moment": "^1.1.2",
     "react-multiline-clamp": "^2.0.0",
     "react-quill": "^2.0.0",
@@ -59,6 +66,7 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
+    "@types/contrast-color": "^1.0.0",
     "@types/dompurify": "^2.3.4",
     "@types/draftjs-to-html": "^0.8.1",
     "@types/emoji-mart": "^3.0.9",

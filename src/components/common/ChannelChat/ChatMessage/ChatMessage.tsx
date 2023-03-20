@@ -5,6 +5,7 @@ import cn from 'classnames';
 import 'moment-timezone';
 import moment from 'moment';
 import Clamp from 'react-multiline-clamp';
+import { useTranslation } from 'react-i18next';
 
 import Identity from 'src/components/common/Identity';
 import s from './ChatMessage.module.scss';
@@ -22,14 +23,18 @@ type Props = HTMLAttributes<HTMLDivElement> & {
 }
 
 const HoveredMention = ({ codename }: { codename: string }) => {
-  const contributors = useAppSelector(selectors.allContributors);
-  const mentioned = useMemo(() => contributors.find((c) => c.codename === codename), [codename, contributors]);
+  const contributors = useAppSelector(selectors.currentContributors);
+  const mentioned = useMemo(
+    () => contributors.find((c) => c.codename === codename),
+    [codename, contributors]
+  );
   return mentioned ? (
     <Identity {...mentioned} />
   ) : null;
 }
 
 const ChatMessage: FC<Props> = ({ clamped, message, ...htmlProps }) => {
+  const { t } = useTranslation();
   const repliedToMessage = useAppSelector(messages.selectors.repliedTo(message));
   const markup = useMemo(
     () => inflate(message.body),
@@ -91,15 +96,20 @@ const ChatMessage: FC<Props> = ({ clamped, message, ...htmlProps }) => {
             <>
               <Identity {...message} />
               <span className={cn(s.separator, 'mx-1')}>
-                replied to
+                {t('replied to')}
               </span>
-              {repliedToMessage
-                ? <Identity {...repliedToMessage} />
-                : <span className={cn(s.separator, '')}><strong>deleted/unknown</strong></span>}
-
+              {
+              repliedToMessage
+                ? <Identity clickable {...repliedToMessage} />
+                : (
+                  <span className={cn(s.separator, '')}>
+                    <strong>{t('deleted/unknown')}</strong>
+                  </span>
+                )
+              }
             </>
           ) : (
-            <Identity {...message} />
+            <Identity clickable {...message} />
           )}
 
           <span className={cn(s.messageTimestamp)}>
@@ -122,8 +132,14 @@ const ChatMessage: FC<Props> = ({ clamped, message, ...htmlProps }) => {
                 marginBottom: '1px'
               }}
             >
-              Show mix
+              {t('Show mix')}
             </a>
+          )}
+          &nbsp;
+          {message.status === MessageStatus.Failed && (
+            <span className='text-xs' style={{ color: 'var(--red)' }}>
+              ({t('Failed')})
+            </span>
           )}
         </div>
 
@@ -148,7 +164,7 @@ const ChatMessage: FC<Props> = ({ clamped, message, ...htmlProps }) => {
             >
               {repliedToMessage && replyMarkup ? (
                 <>
-                  <Identity {...repliedToMessage} />
+                  <Identity clickable {...repliedToMessage} />
                   <Clamp lines={3}>
                     <p
                       className='message'
@@ -159,19 +175,19 @@ const ChatMessage: FC<Props> = ({ clamped, message, ...htmlProps }) => {
                   </Clamp>
                 </>
               ) : (
-                <>This message is unknown/deleted</>
+                <>{t('This message is unknown/deleted')}</>
               )}
             </p>
           )}
           <Clamp
             showMoreElement={({ toggle }: { toggle: () => void }) => (
               <button style={{ color: 'var(--cyan)'}} type='button' onClick={toggle}>
-                Show more
+                {t('Show more')}
               </button>
             )}
             showLessElement={({ toggle }: { toggle: () => void }) => (
               <button style={{ color: 'var(--cyan)'}} type='button' onClick={toggle}>
-                Show less
+                {t('Show less')}
               </button>
             )}
             maxLines={Number.MAX_SAFE_INTEGER}
@@ -179,7 +195,7 @@ const ChatMessage: FC<Props> = ({ clamped, message, ...htmlProps }) => {
             lines={clamped ? 3 : Number.MAX_SAFE_INTEGER}>
             {markup ? <p
               className={cn('message', s.messageBody, {
-                [s.messageBody__failed]: message.status === 3
+                [s.messageBody__failed]: message.status === MessageStatus.Failed
               })}
               dangerouslySetInnerHTML={{
                 __html: markup

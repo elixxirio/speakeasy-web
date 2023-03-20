@@ -5,38 +5,47 @@ import { ModalCtaButton } from 'src/components/common';
 import { useNetworkClient } from 'src/contexts/network-client-context';
 import { useUI } from 'src/contexts/ui-context';
 import * as channels from 'src/store/channels';
+import * as dms from 'src/store/dms';
 import { useAppSelector } from 'src/store/hooks';
+import { useTranslation } from 'react-i18next';
 
 const NickNameSetView: FC = () => {
+  const { t } = useTranslation();
   const currentChannel = useAppSelector(channels.selectors.currentChannel);
+  const currentConversation = useAppSelector(dms.selectors.currentConversation);
   const { getNickName, setNickName } = useNetworkClient();
-  const [nickName, setnickName] = useState(getNickName() || '');
+  const [localNickname, setLocalNickname] = useState(getNickName() || '');
   const [error, setError] = useState('');
   const { closeModal } = useUI();
 
   const onSubmit = useCallback(() => {
     setError('');
-    const success = setNickName(nickName);
+    const success = setNickName(localNickname);
     if (success) {
       closeModal();
     } else {
-      setError('Invalid nickname');
+      setError(t('Invalid nickname'));
     }
-  }, [closeModal, nickName, setNickName]);
+  }, [t, closeModal, localNickname, setNickName]);
 
   return (
     <div
       className={cn('w-full flex flex-col justify-center items-center', s.root)}
     >
-      <h2 className='mt-9 mb-4'>Set Nickname</h2>
+      <h2 className='mt-9 mb-4'>
+        {t('Set Nickname')}
+      </h2>
       <p className='mb-8 text text--xs' style={{ color: 'var(--cyan)' }}>
-        Set your nickname for {currentChannel?.name || ''} channel
+        {currentConversation
+         ? t('Set your nickname for the {{channelName}} channel', { channelName: currentChannel?.name })
+         : t('Set your nickname for all direct messages')
+        }
       </p>
       <input
         type='text'
-        placeholder='Enter your nickname'
+        placeholder={t('Enter your nickname')}
         className='mt-1'
-        value={nickName}
+        value={localNickname}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
@@ -44,7 +53,7 @@ const NickNameSetView: FC = () => {
           }
         }}
         onChange={e => {
-          setnickName(e.target.value);
+          setLocalNickname(e.target.value);
         }}
       />
       {error && (
@@ -53,7 +62,7 @@ const NickNameSetView: FC = () => {
         </div>
       )}
       <ModalCtaButton
-        buttonCopy='Save'
+        buttonCopy={t('Save')}
         cssClass='my-7'
         onClick={onSubmit}
       />

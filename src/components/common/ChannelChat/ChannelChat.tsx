@@ -11,8 +11,11 @@ import MessagesContainer from './MessagesContainer';
 import PinnedMessage from './PinnedMessage';
 import ChannelHeader from '../ChannelHeader';
 import * as channels from 'src/store/channels';
+import * as dms from 'src/store/dms';
 import { useAppSelector } from 'src/store/hooks';
 import ScrollDiv from './ScrollDiv';
+import Identity from '../Identity';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   messages: Message[];
@@ -20,11 +23,13 @@ type Props = {
 }
 
 const ChannelChat: FC<Props> = ({ messages }) => {
+  const { t } = useTranslation();
   const { pagination } = useNetworkClient();
   const {  reset } = pagination;
   const [replyToMessage, setReplyToMessage] = useState<Message | null>();
   const currentChannel = useAppSelector(channels.selectors.currentChannel);
   const joinedChannels = useAppSelector(channels.selectors.channels);
+  const currentConversation = useAppSelector(dms.selectors.currentConversation)
   const paginatedItems = useMemo(() => pagination.paginate(messages), [messages, pagination]);
 
   useEffect(() => {
@@ -43,13 +48,26 @@ const ChannelChat: FC<Props> = ({ messages }) => {
 
   return (
     <div className={s.root}>
-      {currentChannel ? (
+      {currentChannel || currentConversation ? (
         <>
-          <ChannelHeader {...currentChannel} />
-          <PinnedMessage 
-            handleReplyToMessage={setReplyToMessage}
-          />
+          {currentChannel && (
+            <>
+              <ChannelHeader {...currentChannel} />
+              <PinnedMessage 
+                handleReplyToMessage={setReplyToMessage}
+              />
+            </>
+          )}
+          {currentConversation && (
+            <ChannelHeader
+              id={currentConversation.pubkey}
+              isAdmin={false}
+              name={<Identity {...currentConversation} />}
+              description=''
+              privacyLevel={null} />
+          )}
           <ScrollDiv
+            canSetAutoScroll={pagination.page === 1}
             autoScrollBottom={autoScroll}
             setAutoScrollBottom={setAutoScroll}
             nearBottom={pagination.previous}
@@ -81,8 +99,8 @@ const ChannelChat: FC<Props> = ({ messages }) => {
                   color: 'var(--text-primary)'
                 }}
               >
-                You haven't joined any channel yet. You can create or join a
-                channel to start the journey!
+                {t(`You haven't joined any channel yet. You can create or join a
+                channel to start the journey!`)}
               </div>
             </div>
           )}

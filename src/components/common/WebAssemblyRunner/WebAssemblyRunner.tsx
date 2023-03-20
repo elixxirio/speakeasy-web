@@ -6,8 +6,12 @@ import { useUtils } from 'src/contexts/utils-context';
 
 type Logger = {
   LogToFile: (level: number, maxLogFileSizeBytes: number) => void,
-  LogToFileWorker: (level: number, maxLogFileSizeBytes: number,
-                    wasmJsPath: string, workerName: string) => Promise<void>,
+  LogToFileWorker: (
+    level: number,
+    maxLogFileSizeBytes: number,
+    wasmJsPath: string,
+    workerName: string
+  ) => Promise<void>,
   StopLogging: () => void,
   GetFile: () => Promise<string>,
   Threshold: () => number,
@@ -59,14 +63,15 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
             NewChannelsDatabaseCipher,
             NewChannelsManagerWithIndexedDb,
             NewCmix,
+            NewDMClientWithIndexedDb,
+            NewDMsDatabaseCipher,
             NewDummyTrafficManager,
             Purge,
             ValidForever,
-
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } = (window as any) || {};
 
-          const { Crash, GetLogger } = window;
+          const { GetLogger } = window;
 
           setUtils({
             NewCmix,
@@ -89,6 +94,8 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
             DecodePrivateURL,
             DecodePublicURL,
             GetChannelJSON,
+            NewDMClientWithIndexedDb,
+            NewDMsDatabaseCipher,
             NewDummyTrafficManager,
             NewChannelsDatabaseCipher,
             Purge,
@@ -98,7 +105,6 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
           if (LogLevel) {
             LogLevel(1);
           }
-
 
           const logger = GetLogger()
 
@@ -120,11 +126,8 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
             });
           };
 
-
           window.logger = logger
 
-
-          window.Crash = Crash
           setUtilsLoaded(true);
         }
       );
