@@ -7,10 +7,14 @@ import { MessageId, MessageType } from '@types';
 const initialState: MessagesState = {
   reactions: {},
   contributorsByChannelId: {},
-  byChannelId: {}
+  byChannelId: {},
+  sortedMessagesByChannelId: {}
 };
 
-const contributorMapper = (message: Message): Contributor => pick(message, ['nickname', 'timestamp', 'pubkey', 'codeset', 'codename'])
+const contributorMapper = (message: Message): Contributor => pick(
+  message,
+  ['nickname', 'timestamp', 'pubkey', 'codeset', 'codename', 'color', 'dmToken']
+);
 
 const contributorsReducer = (state: MessagesState['contributorsByChannelId'], msg: Message) => {
   const currentContributors = state[msg.channelId]?.slice() ?? [];
@@ -27,29 +31,38 @@ const contributorsReducer = (state: MessagesState['contributorsByChannelId'], ms
   }
 
   currentContributors.sort(byTimestamp).reverse();
+
   return {
     ...state,
     [msg.channelId]: currentContributors,
   }
 }
 
-const upsert = (state: MessagesState, message: Message) => ({
-  ...state,
-  contributorsByChannelId: contributorsReducer(state.contributorsByChannelId, message),
-  reactions: reactionsReducer(state.reactions, message),
-  ...(message.type !== MessageType.Reaction && !message.hidden && {
-      byChannelId: {
-      ...state.byChannelId,
-      [message.channelId]: {
-        ...state.byChannelId[message.channelId],
-        [message.uuid]: {
-          ...state.byChannelId[message.channelId]?.[message.uuid],
-          ...message
-        }
-      },
+const upsert = (state: MessagesState, message: Message) => {
+  const channelState = {
+    ...state.byChannelId[message.channelId],
+    [message.uuid]: {
+      ...state.byChannelId[message.channelId]?.[message.uuid],
+      ...message
     }
-  })
-});
+  }
+
+  return {
+    ...state,
+    contributorsByChannelId: contributorsReducer(state.contributorsByChannelId, message),
+    reactions: reactionsReducer(state.reactions, message),
+    ...(message.type !== MessageType.Reaction && !message.hidden && {
+        sortedMessagesByChannelId: {
+          ...state.sortedMessagesByChannelId,
+          [message.channelId]: Object.values(channelState).sort(byTimestamp)
+        },
+        byChannelId: {
+        ...state.byChannelId,
+        [message.channelId]: channelState,
+      }
+    })
+  };
+};
 
 export const slice = createSlice({
   initialState,
@@ -70,6 +83,10 @@ export const slice = createSlice({
         ...state,
         reactions: deleteReactionReducer(state.reactions, messageId),
         ...(found && {
+          sortedMessagesByChannelId: {
+            ...state.sortedMessagesByChannelId,
+            [found.channelId]: state.sortedMessagesByChannelId[found.channelId].filter((m) => m.uuid !== found?.uuid)
+          },
           byChannelId: {
             ...state.byChannelId,
             [found.channelId]: omit(state.byChannelId[found.channelId], found.uuid),

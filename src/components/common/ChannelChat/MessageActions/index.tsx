@@ -1,7 +1,7 @@
 import type { BaseEmoji } from 'emoji-mart';
 
-import { FC, useCallback, useEffect, useRef, useState, HTMLAttributes, CSSProperties } from 'react';
-import data from 'public/integrations/assets/emojiSet.json';
+import React, { FC, useCallback, useEffect, useRef, useState, HTMLAttributes, CSSProperties } from 'react';
+import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import cn from 'classnames';
 
@@ -45,7 +45,7 @@ const MessageActions: FC<Props> = ({
   ...props
 }) => {
   const dispatch = useAppDispatch();
-  const isDms = !!useAppSelector(app.selectors.currentConversationId);
+  const isDms = !!useAppSelector(app.selectors.currentChannelOrConversationId);
   const { isMuted: userIsMuted } = useNetworkClient();
   const { closeModal, openModal, setModalView } = useUI();
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -180,4 +180,4 @@ const MessageActions: FC<Props> = ({
   );
 };
 
-export default MessageActions;
+export default React.memo(MessageActions);

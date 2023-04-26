@@ -5,35 +5,38 @@ import useLocalStorage from 'src/hooks/useLocalStorage';
 import s from './UpdatesModal.module.scss';
 
 const UpdatesModal = () => {
-  const [showModal, setShowModal] = useLocalStorage('update-notice_0.3.1', true);
+  const [showModal, setShowModal] = useLocalStorage(`update-notice_${process.env.NEXT_PUBLIC_APP_VERSION}`, true);
   
   return showModal ? (
     <Modal className={s.root} onClose={() => setShowModal(false)}>
-      <h2 className='text-center'>Version 0.3.1</h2>
+      <h2 className='text-center'>Version {process.env.NEXT_PUBLIC_APP_VERSION}</h2>
       <ul style={{ marginLeft: '-1rem'}}>
         <li className='text-center'>
-          💬 Dms are finally here. Click a username to try it out. You can disable them in your channel settings.
+          ⭐ Favoriting channels or dms
         </li>
         <li className='text-center'>
-          🔒 Control your DMs, what channels you can be DMed from and which Users can DM you
+          🔍 You can now search through your channels, dms, or contributors.
         </li>
         <li className='text-center'>
-          💪 Performance enhancements for large channels.
+          👨‍🦳 App state now persists, meaning it remembers your message drafts
+          and which channel you were on when you reload.
         </li>
         <li className='text-center'>
-          👀 Few UX tweaks, channel settings are now in the channel header and
-          account settings are now in the top right corner.
+          📣 New messages now separated by a divider so you know exactly which
+          of them are new to you.
         </li>
         <li className='text-center'>
-          🪲 Fix emoji icons appearing over reply box and fix mentions dropdown appearing under the reply box.
+          ✉️ You can now easily create a new dm by clicking on the + button
+          next to Direct Messages on the left.
         </li>
-
         <li className='text-center'>
-          🌈 You can now see what color you'll get when selecting an identity.
+          ⚠️ The text area now explicitly tells you when your message is too long.
+          It also now has a maximum height so you wont lose your send button when
+          trying to write your novel.
         </li>
       </ul>
       <div className='text-center'>
-        <Button onClick={() => setShowModal(false)}>Later gator.</Button>
+        <Button onClick={() => setShowModal(false)}>Roger that.</Button>
       </div>
     </Modal>
   ) : null;

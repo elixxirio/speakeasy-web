@@ -65,7 +65,7 @@ const useDmClient = (
   const dispatch = useAppDispatch();
   const dmNickname = useAppSelector(dms.selectors.dmNickname);
   const currentConversation = useAppSelector(dms.selectors.currentConversation);
-  const currentConversationId = useAppSelector(app.selectors.currentConversationId);
+  const currentConversationId = useAppSelector(app.selectors.currentChannelOrConversationId);
   const allDms = useAppSelector((state) => state.dms.messagesByPubkey)
   const [client, setClient] = useState<DMClient | undefined>();
   const [databaseCipher, setDatabaseCipher] = useState<DatabaseCipher>();
@@ -177,7 +177,6 @@ const useDmClient = (
           .filter((c) => c.pub_key === pubkey)
           .last()
       ]).then(([message, conversation]) => {
-          // console.log('DM_RECEIVED', message);
           if (!conversation || !message) {
             console.error('Couldn\'t find conversation or message in database.');
             return;
@@ -195,16 +194,16 @@ const useDmClient = (
 
           const messageIsNew = !allDms[message.conversation_pub_key]?.[message.id];
 
+
+          const decryptedMessage = messageMapper(message, mappedConversation);
+
           if (
             currentConversationId !== conversation.pub_key
             && message.sender_pub_key !== userIdentity?.pubkey
             && messageIsNew
           ) {
-            dispatch(dms.actions.notifyNewMessage(conversation.pub_key));
+            dispatch(app.actions.notifyNewMessage(decryptedMessage));
           }
-
-          const decryptedMessage = messageMapper(message, mappedConversation);
-
           dispatch(dms.actions.upsertDirectMessage(decryptedMessage));
 
           if (decryptedMessage.pubkey !== userIdentity?.pubkey && currentConversationId !== conversation.pub_key) {

@@ -1,24 +1,23 @@
 
 import type { RootState } from 'src/store/types';
-import type { Message } from './types';
+import type { Contributor, Message } from './types';
 
+import { flatten, sortBy, uniqBy } from 'lodash';
 import { createSelector } from '@reduxjs/toolkit';
 
 import { currentDirectMessages, dmReactions, currentConversationContributors } from '../dms/selectors';
 
-import { byTimestamp } from '../utils';
-import { currentChannelId } from '../app/selectors';
+import { contributorsSearch, currentChannelOrConversationId } from '../app/selectors';
 
 export const reactions = (state: RootState) => state.messages.reactions;
 export const contributors = (state: RootState) => state.messages.contributorsByChannelId;
 
 export const currentChannelMessages = (state: RootState) => {
-  if (state.app.selectedChannelId === null) {
+  if (state.app.selectedChannelIdOrConversationId === null) {
     return undefined;
   }
 
-  return Object.values(state.messages.byChannelId[state.app.selectedChannelId] ?? {})
-    .sort(byTimestamp);
+  return state.messages.sortedMessagesByChannelId[state.app.selectedChannelIdOrConversationId];
 }
 
 export const reactionsTo = (message: Message) =>
@@ -46,15 +45,32 @@ export const repliedTo = (message: Message) => createSelector(
 export const currentPinnedMessages = (state: RootState) => currentChannelMessages(state)?.filter((msg) => msg.pinned);
 
 export const currentChannelContributors = createSelector(
-  currentChannelId,
+  currentChannelOrConversationId,
   contributors,
   (channelId, allContributors) => channelId !== null && allContributors[channelId] ? allContributors[channelId] : []
 );
 
+export const messageableContributors = createSelector(
+  contributors,
+  (mapped) => {
+    const flattened = flatten(Object.values(mapped))
+    .filter((c) => c.dmToken !== undefined);
 
-export const currentContributors: (root: RootState) => Pick<Message, 'pubkey' | 'codeset' | 'codename' | 'nickname'>[] = createSelector(
+    return sortBy(uniqBy(flattened, (c) => c.pubkey), (c) => `${c.nickname?.toLocaleLowerCase() ?? ''}${c.codename.toLocaleLowerCase()}`);
+  }
+);
+
+export const currentContributors: (root: RootState) => Contributor[] = createSelector(
   currentChannelContributors,
   currentConversationContributors,
-  (channelContributors, conversationContributors) =>  channelContributors.concat(conversationContributors)
+  contributorsSearch,
+  (channelContributors, conversationContributors, search) => {
+    return channelContributors
+      .concat(conversationContributors)
+      .filter((c) =>
+        c.codename.toLocaleLowerCase().includes(search.toLocaleLowerCase())
+        || c.nickname?.toLocaleLowerCase().includes(search.toLocaleLowerCase())
+      )
+  }
 );
  

@@ -94,7 +94,7 @@ const ChatMessage: FC<Props> = ({ clamped, message, ...htmlProps }) => {
         <div className={cn(s.header)}>
           {message.repliedTo !== null ? (
             <>
-              <Identity {...message} />
+              <Identity clickable {...message} />
               <span className={cn(s.separator, 'mx-1')}>
                 {t('replied to')}
               </span>
@@ -115,7 +115,7 @@ const ChatMessage: FC<Props> = ({ clamped, message, ...htmlProps }) => {
           <span className={cn(s.messageTimestamp)}>
             {moment(message.timestamp).format('hh:mm A')}
           </span>
-          {message.status === MessageStatus.Unsent && (
+          {message.status === MessageStatus.Unsent || message.status === MessageStatus.Sent && (
             <Spinner size='xs' />
           )}
           {message.round !== 0 && (
@@ -193,7 +193,7 @@ const ChatMessage: FC<Props> = ({ clamped, message, ...htmlProps }) => {
             maxLines={Number.MAX_SAFE_INTEGER}
             withToggle={clamped}
             lines={clamped ? 3 : Number.MAX_SAFE_INTEGER}>
-            {markup ? <p
+            {markup ? <div
               className={cn('message', s.messageBody, {
                 [s.messageBody__failed]: message.status === MessageStatus.Failed
               })}
@@ -209,4 +209,4 @@ const ChatMessage: FC<Props> = ({ clamped, message, ...htmlProps }) => {
   );
 };
 
-export default ChatMessage;
+export default React.memo(ChatMessage);

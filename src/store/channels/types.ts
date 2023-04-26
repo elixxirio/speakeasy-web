@@ -4,7 +4,7 @@ export enum PrivacyLevel {
   Secret = 2
 }
 
-export type ChannelInfo = {
+export type Channel = {
   name: string;
   id: string;
   description: string;
@@ -13,15 +13,13 @@ export type ChannelInfo = {
   prettyPrint?: string;
 }
 
-export type Channel = ChannelInfo & {
-  currentPage: number;
-  hasMissedMessages?: boolean;
-}
 
 export type ChannelId = Channel['id'];
 
 export type ChannelsState = {
   byId: Record<ChannelId, Channel>;
+  sortedChannels: Array<Channel>;
+  currentPages: Record<ChannelId, number>;
 };
 
 declare module 'src/store/types' {

@@ -1,4 +1,4 @@
-import type { ChannelJSON } from '@contexts/utils-context';
+import type { ChannelJSON } from 'src/types';
 import { FC, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import cn from 'classnames';
@@ -7,14 +7,17 @@ import { ModalCtaButton } from 'src/components/common';
 import { WarningComponent } from 'src/pages/_app';
 
 import s from './JoinChannel.module.scss';
+import CheckboxToggle from '@components/common/CheckboxToggle';
 
 type Props = {
   channelInfo: ChannelJSON;
   url: string;
   onConfirm: () => void;
+  dmsEnabled: boolean;
+  onDmsEnabledChange: (value: boolean) => void
 }
 
-const JoinChannelView: FC<Props> = ({ channelInfo, onConfirm, url }) => {
+const JoinChannelView: FC<Props> = ({ channelInfo, dmsEnabled, onConfirm, onDmsEnabledChange, url }) => {
   const { t } = useTranslation();
   const [success, setSuccess] = useState(false);
   const [cancelled, setCancelled] = useState(false);
@@ -56,16 +59,16 @@ const JoinChannelView: FC<Props> = ({ channelInfo, onConfirm, url }) => {
       </h2>
       <div>
         <div className={cn('mb-4')}>
-          <h4>{channelInfo?.Name || ''}</h4>
+          <h4>{channelInfo?.name || ''}</h4>
           <p className={cn('mt-2 text text--xs')}>
-            {channelInfo?.Description || ''}
+            {channelInfo?.description || ''}
           </p>
         </div>
         <div className={cn('text text--sm mb-2')}>
           <span className='font-bold mr-1'>
             {t('Speakeasy id')}:
           </span>
-          <span>{channelInfo?.ReceptionID || ''}</span>
+          <span>{channelInfo?.receptionId || ''}</span>
         </div>
         <div className={cn(s.channelCredentials)}>
           <span className='text--sm font-bold'>
@@ -73,6 +76,12 @@ const JoinChannelView: FC<Props> = ({ channelInfo, onConfirm, url }) => {
           </span>
           {<span className={cn('text text--xs')}>{url}</span>}
         </div>
+      </div>
+      <div className='flex justify-between mt-8 w-full px-3'>
+        <h3 className='headline--sm'>
+          {t('Enable Direct Messages')}
+        </h3>
+        <CheckboxToggle checked={dmsEnabled} onChange={() => onDmsEnabledChange(!dmsEnabled)} />
       </div>
       <div className='flex justify-center'>
         <ModalCtaButton
