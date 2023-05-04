@@ -35,7 +35,11 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
     if (!utilsLoaded) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const go = new (window as any).Go();
-      go.argv = ['--logLevel=1', '--fileLogLevel=1', '--workerScriptURL=integrations/assets/logFileWorker.js']
+      go.argv = [
+        '--logLevel=1',
+        '--fileLogLevel=1',
+        '--workerScriptURL=integrations/assets/logFileWorker.js',
+      ]
       const binPath = '/integrations/assets/xxdk.wasm';
       WebAssembly?.instantiateStreaming(fetch(binPath), go.importObject).then(
         async (result) => {
@@ -60,7 +64,6 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
             IsNicknameValid,
             LoadChannelsManagerWithIndexedDb,
             LoadCmix,
-            // LogLevel,
             NewChannelsDatabaseCipher,
             NewChannelsManagerWithIndexedDb,
             NewCmix,
@@ -102,10 +105,6 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
             Purge,
             ValidForever
           });
-
-          // if (LogLevel) {
-          //   LogLevel(1);
-          // }
 
 
           if(GetLogger) {
