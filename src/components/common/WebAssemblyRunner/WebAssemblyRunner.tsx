@@ -15,6 +15,7 @@ type Logger = {
 
 declare global {
   interface Window {
+    onWasmInitialized: () => void;
     Crash: () => void;
     GetLogger: () => Logger;
     logger?: Logger;
@@ -22,14 +23,12 @@ declare global {
   }
 }
 
-
-
 const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
   const { setUtils, setUtilsLoaded, utilsLoaded } = useUtils();
 
   useEffect(() => {
     if (!utilsLoaded) {
-      const isReady = new Promise((resolve) => {
+      const isReady = new Promise<void>((resolve) => {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         window.onWasmInitialized = resolve;
@@ -39,7 +38,7 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
       const go = new (window as any).Go();
       go.argv = [
         '--logLevel=1',
-        '--fileLogLevel=-1',
+        '--fileLogLevel=1',
         '--workerScriptURL=integrations/assets/logFileWorker.js',
       ]
       const binPath = '/integrations/assets/xxdk.wasm';
@@ -66,6 +65,7 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
             IsNicknameValid,
             LoadChannelsManagerWithIndexedDb,
             LoadCmix,
+            LoadSynchronizedCmix,
             NewChannelsDatabaseCipher,
             NewChannelsManagerWithIndexedDb,
             NewCmix,
@@ -82,6 +82,7 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
           setUtils({
             NewCmix,
             LoadCmix,
+            LoadSynchronizedCmix,
             GetChannelInfo,
             GenerateChannelIdentity,
             GetDefaultCMixParams,
