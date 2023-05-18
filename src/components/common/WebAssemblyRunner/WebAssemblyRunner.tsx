@@ -22,22 +22,24 @@ declare global {
   }
 }
 
-const isReady = new Promise((resolve) => {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  window.onWasmInitialized = resolve;
-});
+
 
 const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
   const { setUtils, setUtilsLoaded, utilsLoaded } = useUtils();
 
   useEffect(() => {
     if (!utilsLoaded) {
+      const isReady = new Promise((resolve) => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        window.onWasmInitialized = resolve;
+      });
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const go = new (window as any).Go();
       go.argv = [
         '--logLevel=1',
-        '--fileLogLevel=1',
+        '--fileLogLevel=-1',
         '--workerScriptURL=integrations/assets/logFileWorker.js',
       ]
       const binPath = '/integrations/assets/xxdk.wasm';
