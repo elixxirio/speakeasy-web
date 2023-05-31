@@ -13,7 +13,7 @@ import { bus, onMessagePinned, onMessageUnpinned, handleChannelEvent, ChannelEve
 import { decoder, encoder, exportDataToFile, inflate } from 'src/utils';
 import { useAuthentication } from 'src/contexts/authentication-context';
 import { PrivacyLevel, useUtils } from 'src/contexts/utils-context';
-import { MESSAGE_LEASE, PIN_MESSAGE_LENGTH_MILLISECONDS, STATE_PATH, CHANNELS_WORKER_JS_PATH, CMIX_NETWORK_READINESS_THRESHOLD } from '../constants';
+import { MESSAGE_LEASE, PIN_MESSAGE_LENGTH_MILLISECONDS, CHANNELS_WORKER_JS_PATH, CMIX_NETWORK_READINESS_THRESHOLD } from '../constants';
 import useNotification from 'src/hooks/useNotification';
 import { useDb } from './db-context';
 import useCmix, { NetworkStatus } from 'src/hooks/useCmix';
@@ -1146,7 +1146,7 @@ export const NetworkProvider: FC<WithChildren> = props => {
     if (utils && utils.Purge && connect) {
       try {
         disconnect();
-        utils.Purge(STATE_PATH, password);
+        utils.Purge(password);
         window.localStorage.clear();
         Cookies.remove('userAuthenticated', { path: '/' });
         setIsAuthenticated(false);
