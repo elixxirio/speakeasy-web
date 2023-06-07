@@ -112,7 +112,7 @@ export type XXDKUtils = {
   ) => DummyTraffic;
   GetWasmSemanticVersion: () => Uint8Array;
   NewChannelsDatabaseCipher: (cmixId: number, storagePassword: Uint8Array, payloadMaximumSize: number) => Cipher;
-  Purge: (storageDirectory: string, userPassword: string) => void;
+  Purge: (userPassword: string) => void;
   ValidForever: () => number;
 }
 
