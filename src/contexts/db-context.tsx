@@ -1,11 +1,13 @@
 import type { MessageStatus, MessageType, WithChildren } from 'src/types';
-import { FC, useContext, useEffect, useMemo } from 'react';
+import { FC, useContext, useEffect } from 'react';
 
 import { Dexie } from 'dexie';
 import { createContext, useCallback, useState } from 'react';
 
 import useLocalStorage from 'src/hooks/useLocalStorage';
-import { CHANNELS_STORAGE_TAG, DMS_DATABASE_NAME } from 'src/constants';
+import { DMS_DATABASE_NAME } from 'src/constants';
+import useStorageTag from 'src/hooks/useChannelsStorageTag';
+import { AppEvents, bus } from 'src/events';
 
 export type DBMessage = {
   id: number;
@@ -43,10 +45,10 @@ export const DBContext = createContext<DBContextType>({ initDb: () => {} } as un
 export const DBProvider: FC<WithChildren> = ({ children }) => {
   const [db, setDb] = useState<Dexie>();
   const [dmDb, setDmDb] = useState<Dexie>();
-  const [storageTags] = useLocalStorage<string[]>(CHANNELS_STORAGE_TAG, []);
-  const storageTag = useMemo(() => storageTags?.[0], [storageTags]);
+  const { value: storageTag } = useStorageTag();
   const [dmsDatabaseName] = useLocalStorage<string | null>(DMS_DATABASE_NAME, null);
-  
+  const [managerLoaded, setManagerLoaded] = useState(false);
+
   const initDb = useCallback((tag: string) => {
     const instance = new Dexie(`${tag}_speakeasy`);
     return instance.open().then(setDb);
@@ -55,9 +57,9 @@ export const DBProvider: FC<WithChildren> = ({ children }) => {
   const initDmsDb = useCallback((dbName: string) => {
     const dmInstance = new Dexie(dbName);
     return dmInstance.open().then(setDmDb);
-  }, [])
+  }, []);
 
-  useEffect(() => {
+  const init = useCallback(() => {
     if (storageTag) {
       initDb(storageTag);
     }
@@ -65,7 +67,20 @@ export const DBProvider: FC<WithChildren> = ({ children }) => {
     if (dmsDatabaseName) {
       initDmsDb(dmsDatabaseName);
     }
-  }, [dmsDatabaseName, initDb, initDmsDb, storageTag]);
+  }, [dmsDatabaseName, initDb, initDmsDb, storageTag])
+
+  useEffect(() => {
+    if (managerLoaded) {
+      init();
+    }
+  }, [init, managerLoaded]);
+
+  useEffect(() => {
+    const listener = () => setManagerLoaded(true);
+    bus.addListener(AppEvents.CHANNEL_MANAGER_LOADED, listener);
+
+    return () => { bus.removeListener(AppEvents.CHANNEL_MANAGER_LOADED, listener) }
+  }, [])
 
   return (
     <DBContext.Provider value={{ db, dmDb, initDb, initDmsDb }}>
