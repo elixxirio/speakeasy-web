@@ -3,7 +3,7 @@ import cn from 'classnames';
 import { saveAs } from 'file-saver';
 import { useTranslation } from 'react-i18next';
 
-import { ModalCtaButton } from 'src/components/common';
+import { PrimaryButton, SecondaryButton } from 'src/components/common';
 import useStep from 'src/hooks/useStep';
 import { useAuthentication } from 'src/contexts/authentication-context';
 import useInput from 'src/hooks/useInput';
@@ -17,7 +17,7 @@ const ExportCodenameView: FC = () => {
   const { t } = useTranslation();
   const currentChannel = useAppSelector(channels.selectors.currentChannel);
   const { exportChannelAdminKeys } = useNetworkClient();
-  const { checkUser } = useAuthentication();
+  const { getOrInitPassword } = useAuthentication();
   const [password, setPassword] = useInput('');
   const [encryptionPassword, setEncryptionPassword] = useInput('');
   const [encryptionPasswordConfirmation, setEncryptionPasswordConfirmation] = useInput('');
@@ -26,13 +26,13 @@ const ExportCodenameView: FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const checkPassword = useCallback(() => {
-    if (checkUser(password)) {
+    if (getOrInitPassword(password)) {
       setError('');
       next();
     } else {
       setError(t('Invalid Password'));
     }
-  }, [t, checkUser, next, password]);
+  }, [t, getOrInitPassword, next, password]);
 
   const onExport = useCallback(() => {
     if (encryptionPassword !== encryptionPasswordConfirmation) {
@@ -74,11 +74,12 @@ const ExportCodenameView: FC = () => {
             value={password}
             onChange={setPassword}
           />
-          <ModalCtaButton
-            buttonCopy={t('Unlock')}
-            cssClass={cn('mt-5', s.button)}
+          <PrimaryButton
+            className={cn('mt-5', s.button)}
             onClick={checkPassword}
-          />
+          >
+            {t('Unlock')}
+          </PrimaryButton>
         </>
       )}
       {step === 2 && (
@@ -116,18 +117,18 @@ const ExportCodenameView: FC = () => {
             />
           </div>
           <div className='space-x-4 flex'>
-            <ModalCtaButton
-              style={{ borderColor: 'var(--cyan)', color: 'white' }}
-              buttonCopy={t('Cancel')}
-              cssClass={cn('mt-5', s.button)}
+            <SecondaryButton
+              className={cn('mt-5', s.button)}
               onClick={reset}
-            />
-
-            <ModalCtaButton
-              buttonCopy={t('Export')}
-              cssClass={cn('mt-5', s.button)}
+            >
+              {t('Cancel')}
+            </SecondaryButton>
+            <PrimaryButton
+              className={cn('mt-5', s.button)}
               onClick={onExport}
-            />
+            >
+              {t('Export')}
+            </PrimaryButton>
           </div>
         </>
       )}

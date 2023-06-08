@@ -2,7 +2,7 @@ import { FC, useEffect, useState } from 'react';
 import cn from 'classnames';
 import { useTranslation } from 'react-i18next';
 
-import { ModalCtaButton } from 'src/components/common';
+import { PrimaryButton } from 'src/components/common';
 import { useNetworkClient } from 'src/contexts/network-client-context';
 import useCopyClipboard from 'src/hooks/useCopyToClipboard';
 import * as channels from 'src/store/channels';
@@ -81,15 +81,16 @@ const ShareChannelView: FC = () => {
         <div className='mb-5' style={{ color: 'var(--green)', opacity: copied ? 1 : 0, transition: 'all 0.2s ease-out' }}>
           {t('Copied!')}
         </div>
-        <ModalCtaButton
-          buttonCopy={t('Copy')}
-          cssClass={cn(s.button)}
+        <PrimaryButton
+          className={cn(s.button)}
           onClick={() => {
             copy(credentials.password
                 ? `${credentials.url} Passphrase: ${credentials.password}`
                 : credentials.url);
           }}
-        />
+        >
+          {t('Copy')}
+        </PrimaryButton>
       </div>
       <p
         className={cn('mb-8 text text--xs', s.warn)}

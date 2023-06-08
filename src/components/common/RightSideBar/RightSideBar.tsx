@@ -32,6 +32,7 @@ const RightSideBar: FC<Props> = ({ collapsed, cssClasses, onToggle }) => {
 
   const contributorsSearch = useAppSelector(app.selectors.contributorsSearch);
   const currentChannel = useAppSelector(channels.selectors.currentChannel);
+  const currentConversation = useAppSelector(dms.selectors.currentConversation);
   const { codename, color, pubkey } = useAppSelector(identity.selectors.identity) ?? {};
   const contributors = useAppSelector(messages.selectors.currentContributors);
   const dmNickname = useAppSelector(dms.selectors.dmNickname);
@@ -50,8 +51,11 @@ const RightSideBar: FC<Props> = ({ collapsed, cssClasses, onToggle }) => {
     dispatch(app.actions.updateContributorsSearch(e.target.value));
   }, [dispatch]);
 
+  const hasChannelOrConversationActive = !!currentConversation || !!currentChannel;
+
   return (
     <div
+      data-testid='right-side-bar'
       className={cn(s.root, cssClasses, { [s.collapsed]: collapsed })}
     >
       <div className={s.header}>
@@ -102,19 +106,21 @@ const RightSideBar: FC<Props> = ({ collapsed, cssClasses, onToggle }) => {
                   {codename} ({t('you')})
                 </span>
               )}
-
-              <span
-                style={{
-                  color: 'var(--cyan)'
-                }}
-                className='cursor-pointer uppercase underline mt-1'
-                onClick={() => {
-                  setModalView('SET_NICK_NAME');
-                  openModal();
-                }}
-              >
-                {nickname?.length ? t('Change') : t('Set nickname')}
-              </span>
+                {hasChannelOrConversationActive && (
+                  <span
+                    style={{
+                      color: 'var(--cyan)'
+                    }}
+                    className='cursor-pointer uppercase underline mt-1'
+                    onClick={() => {
+                      setModalView('SET_NICK_NAME');
+                      openModal();
+                    }}
+                    >
+                    {nickname?.length ? t('Change') : t('Set nickname')}
+                  </span>
+                )}
+                
             </div>
 
             {contributors?.filter((c) => c.pubkey !== pubkey)

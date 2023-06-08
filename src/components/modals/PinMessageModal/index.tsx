@@ -2,7 +2,7 @@ import { FC } from 'react';
 import cn from 'classnames';
 import { useTranslation } from 'react-i18next';
 
-import { ModalCtaButton } from 'src/components/common';
+import { PrimaryButton, SecondaryButton } from 'src/components/common';
 import Modal from 'src/components/modals';
 
 import s from './PinMessage.module.scss';
@@ -40,15 +40,16 @@ const PinMessageModal: FC<Props> = ({ onCancel, onConfirm }) =>  {
               get unpinned again`)}
             </p>
             <div className={cn('mb-6', s.buttonGroup)}>
-              <ModalCtaButton
-                buttonCopy={t('Confirm and Pin')}
+              <PrimaryButton
                 onClick={handleConfirmation}
-              />
-              <ModalCtaButton
-                style={{ backgroundColor: 'transparent', color: 'var(--orange)', borderColor: 'var(--orange)' }}
-                buttonCopy={t('Cancel')}
+              >
+                {t('Confirm and Pin')}
+              </PrimaryButton>
+              <SecondaryButton
                 onClick={onCancel}
-              />
+              >
+                {t('Cancel')}
+              </SecondaryButton>
             </div>
           </>
         )}

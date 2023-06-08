@@ -1,10 +1,5 @@
-import { ACCOUNT_SYNC } from 'src/constants';
-import useLocalStorage from './useLocalStorage'
-import { useUI } from '@contexts/ui-context';
-import { useEffect } from 'react';
-import { useAuthentication } from '@contexts/authentication-context';
-import { NetworkStatus } from './useCmix';
-import { useNetworkClient } from '@contexts/network-client-context';
+import { ACCOUNT_SYNC, ACCOUNT_SYNC_SERVICE } from 'src/constants';
+import useLocalStorage from './useLocalStorage';
 
 export enum AccountSyncStatus {
   NotSynced = 'NotSynced',
@@ -19,17 +14,15 @@ export enum AccountSyncService {
 }
 
 const useAccountSync = () => {
-  const { networkStatus } = useNetworkClient();
-  const { isAuthenticated } = useAuthentication();
-  const { openModal, setModalView } = useUI();
-  const [status] = useLocalStorage(ACCOUNT_SYNC, AccountSyncStatus.NotSynced);
+  const [status, setStatus] = useLocalStorage(ACCOUNT_SYNC, AccountSyncStatus.NotSynced);
+  const [service, setService] = useLocalStorage(ACCOUNT_SYNC_SERVICE, AccountSyncService.None);
 
-  useEffect(() => {
-    if (networkStatus === NetworkStatus.CONNECTED && isAuthenticated && status === AccountSyncStatus.NotSynced) {
-      setModalView('ACCOUNT_SYNC');
-      openModal()
-    }
-  }, [isAuthenticated, networkStatus, openModal, setModalView, status]);
+  return {
+    status,
+    setStatus,
+    service,
+    setService
+  }
 }
 
 export default useAccountSync;

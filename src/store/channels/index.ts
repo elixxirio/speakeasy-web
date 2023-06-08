@@ -1,12 +1,16 @@
 import type { Channel, ChannelId, ChannelsState } from './types';
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { pickBy, omit, uniqBy } from 'lodash';
+import { NotificationLevel, UserMutedEvent } from '@types';
+import { pickBy, omit, uniqBy, uniq } from 'lodash';
 
 const initialState: ChannelsState = {
   byId: {},
   sortedChannels: [],
   currentPages: {},
+  nicknames: {},
+  mutedUsersByChannelId: {},
+  notificationLevels: {},
 };
 
 const initialChannelState = {
@@ -66,20 +70,57 @@ export const slice = createSlice({
         byId: filtered,
         sortedChannels: state.sortedChannels.filter((ch) => ch.id !== channelId)
       }
-      
     },
-    upgradeAdmin: (state: ChannelsState, { payload: channelId }: PayloadAction<ChannelId>) => {
-      return ({
+    updateAdmin: (state: ChannelsState, { payload: { channelId, isAdmin = true } }: PayloadAction<{ channelId: ChannelId, isAdmin?: boolean }>) => {
+      return !state.byId[channelId] ? state : ({
         ...state,
         byId: {
           ...state.byId,
           [channelId]: {
             ...state.byId[channelId],
-            isAdmin: true
+            isAdmin: isAdmin
           }
         }
       })
     },
+    updateNickname: (state: ChannelsState, { payload: { channelId, nickname }}: PayloadAction<{ channelId: ChannelId, nickname?: string }>) => {
+      return {
+        ...state,
+        nicknames: {
+          ...state.nicknames,
+          [channelId]: nickname
+        }
+      }
+    },
+    updateMuted: (state: ChannelsState, { payload: { channelId, pubkey, unmute }}: PayloadAction<UserMutedEvent>) => {
+      const mutedUsers = unmute
+        ? (state.mutedUsersByChannelId[channelId] || []).filter((key) => key !== pubkey)
+        : uniq((state.mutedUsersByChannelId[channelId] || []).concat(pubkey));
+
+      return {
+        ...state,
+        mutedUsersByChannelId: {
+          ...state.mutedUsersByChannelId,
+          [channelId]: mutedUsers
+        }
+      }
+    },
+    setMutedUsers: (state: ChannelsState, { payload: { channelId, mutedUsers } }: PayloadAction<{ channelId: ChannelId, mutedUsers: string[] }>) => {
+      return {
+        ...state,
+        mutedUsersByChannelId: {
+          ...state.mutedUsersByChannelId,
+          [channelId]: mutedUsers
+        }
+      }
+    },
+    updateNotificationLevel: (state: ChannelsState, { payload: { channelId, level } }: PayloadAction<{ channelId: ChannelId, level?: NotificationLevel }>) => ({
+      ...state,
+      notificationLevels: {
+        ...state.notificationLevels,
+        [channelId]: level
+      }
+    })
   }
 });
 

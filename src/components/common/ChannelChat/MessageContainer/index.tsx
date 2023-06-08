@@ -16,10 +16,9 @@ import * as channels from 'src/store/channels';
 import * as app from 'src/store/app';
 import { useAppDispatch, useAppSelector } from 'src/store/hooks';
 import * as identity from 'src/store/identity';
-import { awaitEvent, Event } from 'src/events';
+import { awaitEvent, AppEvents, ChannelEvents } from 'src/events';
 
 import classes from './MessageContainer.module.scss';
-
 
 type Props = {
   className?: string;
@@ -35,6 +34,7 @@ const MessageContainer: FC<Props> = ({ clamped = false, className, handleReplyTo
   const dispatch = useAppDispatch();
   const [isNewMessage, setIsNewMessage] = useState(false);
   const missedMessages = useAppSelector(app.selectors.missedMessages);
+  const mutedUsers = useAppSelector(channels.selectors.mutedUsers);
   const { pubkey } = useAppSelector(identity.selectors.identity) ?? {};
   const currentChannel = useAppSelector(channels.selectors.currentChannel);
   const [showActionsWrapper, setShowActionsWrapper] = useState(false);
@@ -43,7 +43,6 @@ const MessageContainer: FC<Props> = ({ clamped = false, className, handleReplyTo
     muteUser,
     pinMessage,
     sendReaction,
-    userIsMuted
   } = useNetworkClient();
 
   const [muteUserModalOpen, muteUserModalToggle] = useToggle();
@@ -74,7 +73,7 @@ const MessageContainer: FC<Props> = ({ clamped = false, className, handleReplyTo
 
     promises.push(muteUser(message.pubkey, false));
 
-    promises.push(awaitEvent(Event.USER_MUTED));  // delay to let the nodes propagate
+    promises.push(awaitEvent(ChannelEvents.USER_MUTED));  // delay to let the nodes propagate
 
     await Promise.all(promises);
 
@@ -85,7 +84,7 @@ const MessageContainer: FC<Props> = ({ clamped = false, className, handleReplyTo
     if (unpin === true) {
       await Promise.all([
         pinMessage(message, unpin),
-        awaitEvent(Event.MESSAGE_UNPINNED) // delay to let the nodes propagate
+        awaitEvent(AppEvents.MESSAGE_UNPINNED) // delay to let the nodes propagate
       ]);
     } else {
       showPinModal();
@@ -95,7 +94,7 @@ const MessageContainer: FC<Props> = ({ clamped = false, className, handleReplyTo
   const pinSelectedMessage = useCallback(async () => {
     await Promise.all([
       pinMessage(message),
-      awaitEvent(Event.MESSAGE_PINNED) // delay to let the nodes propagate
+      awaitEvent(AppEvents.MESSAGE_PINNED) // delay to let the nodes propagate
     ]);
     hidePinModal();
   }, [hidePinModal, message, pinMessage]);
@@ -140,7 +139,7 @@ const MessageContainer: FC<Props> = ({ clamped = false, className, handleReplyTo
               })}
               dmsEnabled={message.dmToken !== undefined}
               isPinned={message.pinned}
-              isMuted={userIsMuted(message.pubkey)}
+              isMuted={mutedUsers[message.channelId]?.includes(message.pubkey)}
               onMuteUser={muteUserModalToggle.toggleOn}
               onPinMessage={handlePinMessage}
               onReactToMessage={handleEmojiReaction}
@@ -155,10 +154,10 @@ const MessageContainer: FC<Props> = ({ clamped = false, className, handleReplyTo
     )}
     {isNewMessage && (
       <div className='relative flex items-center px-4'>
-          <div className='flex-grow border-t' style={{ borderColor: 'var(--orange)'}}></div>
-          <span className='flex-shrink mx-4' style={{ color: 'var(--orange)'}}>
-            {t('New!')}
-          </span>
+        <div className='flex-grow border-t' style={{ borderColor: 'var(--orange)'}}></div>
+        <span className='flex-shrink mx-4' style={{ color: 'var(--orange)'}}>
+          {t('New!')}
+        </span>
       </div>
     )}
     <ChatMessage

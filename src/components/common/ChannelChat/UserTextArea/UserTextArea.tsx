@@ -20,6 +20,7 @@ import s from './UserTextArea.module.scss';
 import SendButton from '../SendButton';
 import * as app from 'src/store/app';
 import * as messages from 'src/store/messages';
+import { userIsMuted } from 'src/store/selectors';
 import { useAppDispatch, useAppSelector } from 'src/store/hooks';
 import Spinner from 'src/components/common/Spinner';
 
@@ -175,17 +176,21 @@ const UserTextArea: FC<Props> = ({
     atMentions = contributors?.map((c) => ({ id: c.pubkey, value: c.nickname ? `${c.nickname} (${c.codename})` : c.codename })) ?? [];
   }, [contributors]);
   const channelId = useAppSelector(app.selectors.currentChannelOrConversationId);
+  const isMuted = useAppSelector(userIsMuted);
   const { openModal, setModalView } = useUI();
   const {
     cmix,
-    isMuted,
     sendMessage,
     sendReply
   } = useNetworkClient();
   const [editorLoaded, setEditorLoaded] = useState(false);
   const message = useAppSelector(app.selectors.messageDraft(channelId ?? ''))
-  const deflatedContent = useMemo(() => deflate(message), [message])
-  const messageIsUnderLimit = useMemo(() => deflatedContent.length <= MESSAGE_MAX_SIZE, [deflatedContent])
+  const deflatedContent = useMemo(() => deflate(message), [message]);
+  const messageIsUnderLimit = useMemo(() => deflatedContent.length <= MESSAGE_MAX_SIZE, [deflatedContent]);
+  // const messageHasTooManyMentions = useMemo(() => {
+  //   const limit = !!replyToMessage ? 3 : 4;
+    
+  // }, []);
   const placeholder = useMemo(
     () => isMuted
       ? t('You have been muted by an admin and cannot send messages.')

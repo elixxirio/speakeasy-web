@@ -6,6 +6,10 @@ import React, { FC, useCallback, useState } from 'react';
 import { decoder } from '@utils/index';
 import Loading from '@components/modals/LoadingView';
 import { identityDecoder } from '@utils/decoders';
+import { RemoteStore } from 'src/types/collective';
+import { ChannelEventHandler, DMReceivedCallback } from 'src/events';
+import { WebAssemblyRunner } from '@components/common';
+import { useTranslation } from 'react-i18next';
 
 export enum PrivacyLevel {
   Public = 0,
@@ -18,14 +22,48 @@ export type Cipher = {
   Decrypt: (plaintext: Uint8Array) => Uint8Array;
 }
 
-export type MessageReceivedCallback = (uuid: string, channelId: Uint8Array, update: boolean) => void;
-export type MessageDeletedCallback = (uuid: Uint8Array) => void;
-export type UserMutedCallback = (channelId: Uint8Array, pubkey: string, unmute: boolean) => void;
-export type DMReceivedCallback = (uuid: string, pubkey: Uint8Array, update: boolean, updateConversation: boolean) => void;
+export type ChannelManagerCallbacks = {
+  EventUpdate: ChannelEventHandler;
+}
+
+export type Notifications = {
+  AddToken: (newToken: string, app: string) => void;
+  RemoveToken: () => void;
+  SetMaxState: (maxState: number) => void;
+  GetMaxState: () => number;
+  GetID: () => number;
+}
 
 export type XXDKUtils = {
-  NewCmix: (ndf: string, storageDir: string, password: Uint8Array, registrationCode: string) => Promise<void>;
-  LoadCmix: (storageDirectory: string, password: Uint8Array, cmixParams: Uint8Array) => Promise<CMix>;
+  NewCmix: (
+    ndf: string,
+    storageDir: string,
+    password: Uint8Array,
+    registrationCode: string
+  ) => Promise<void>;
+  NewSynchronizedCmix: (
+    ndf: string,
+    storageDir: string,
+    password: Uint8Array,
+    remoteStore: RemoteStore,
+  ) => Promise<void>;
+  LoadCmix: (
+    storageDirectory: string,
+    password: Uint8Array,
+    cmixParams: Uint8Array
+  ) => Promise<CMix>;
+  LoadSynchronizedCmix: (
+    storageDirectory: string,
+    password: Uint8Array,
+    remoteStore: RemoteStore,
+    cmixParams: Uint8Array
+  ) => Promise<CMix>;
+  LoadNotifications: (
+    cmixId: number
+  ) => Notifications;
+  LoadNotificationsDummy:  (
+    cmixId: number
+  ) => Notifications;
   GetDefaultCMixParams: () => Uint8Array;GetChannelInfo: (prettyPrint: string) => Uint8Array;
   Base64ToUint8Array: (base64: string) => Uint8Array;
   GenerateChannelIdentity: (cmixId: number) => Uint8Array;
@@ -34,9 +72,8 @@ export type XXDKUtils = {
     wasmJsPath: string,
     privateIdentity: Uint8Array,
     extensionBuilderIDsJSON: Uint8Array,
-    onMessage: MessageReceivedCallback,
-    onDelete: MessageDeletedCallback,
-    onMuted: UserMutedCallback,
+    notificationsId: number,
+    callbacks: ChannelManagerCallbacks,
     channelDbCipher: number
   ) => Promise<ChannelManager>;
   NewDMClientWithIndexedDb: (
@@ -51,9 +88,9 @@ export type XXDKUtils = {
     cmixId: number,
     wasmJsPath: string,
     storageTag: string,
-    onMessage: MessageReceivedCallback,
-    onDelete: MessageDeletedCallback,
-    onMuted: UserMutedCallback,
+    extensionBuilderIDsJSON: Uint8Array,
+    notificationsId: number,
+    callbacks: ChannelManagerCallbacks,
     channelDbCipher: number
   ) => Promise<ChannelManager>;
   GetPublicChannelIdentityFromPrivate: (privateKey: Uint8Array) => Uint8Array;
@@ -75,7 +112,7 @@ export type XXDKUtils = {
   ) => DummyTraffic;
   GetWasmSemanticVersion: () => Uint8Array;
   NewChannelsDatabaseCipher: (cmixId: number, storagePassword: Uint8Array, payloadMaximumSize: number) => Cipher;
-  Purge: (storageDirectory: string, userPassword: string) => void;
+  Purge: (userPassword: string) => void;
   ValidForever: () => number;
 }
 
@@ -108,7 +145,8 @@ export type IdentityJSON = {
 }
 
 export const UtilsProvider: FC<WithChildren> = ({ children }) => {
-  const [utils, setUtils] = useState<XXDKUtils>(initialUtils);
+  const { t } = useTranslation();
+  const [utils, setUtils] = useState<XXDKUtils>();
   const [utilsLoaded, setUtilsLoaded] = useState<boolean>(false);
 
   const getCodeNameAndColor = useCallback((publicKey: string, codeset: number) => {
@@ -147,14 +185,16 @@ export const UtilsProvider: FC<WithChildren> = ({ children }) => {
   return (
     <UtilsContext.Provider
       value={{
-        utils,
+        utils: utils as XXDKUtils,
         setUtils,
         utilsLoaded,
         setUtilsLoaded,
         getCodeNameAndColor,
       }}
     >
-      {utils ? children : <Loading />}
+      <WebAssemblyRunner>
+        {utils ? children : <Loading message={t('Loading XXDK...')} />}
+      </WebAssemblyRunner>
     </UtilsContext.Provider>
   );
 };

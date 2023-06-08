@@ -1,107 +1,113 @@
-import { Message } from './store/messages/types';
+import type { TypedEventEmitter } from 'src/types/emitter';
+import type { Message, DMReceivedEvent, MessageReceivedEvent, UserMutedEvent, MessageDeletedEvent, MessagePinEvent, MessageUnPinEvent, NicknameUpdatedEvent, NotificationUpdateEvent, AdminKeysUpdateEvent, DmTokenUpdateEvent } from 'src/types';
 import EventEmitter from 'events';
 import delay from 'delay';
+import { Decoder, adminKeysUpdateDecoder, dmTokenUpdateDecoder, messageDeletedEventDecoder, messageReceivedEventDecoder, nicknameUpdatedEventDecoder, notificationUpdateEventDecoder, userMutedEventDecoder } from '@utils/decoders';
+import { AccountSyncService } from './hooks/useAccountSync';
 
-export const bus = new EventEmitter();
-
-export enum Event {
-  DM_RECEIVED = 'dm-message',
-  MESSAGE_RECEIVED = 'message',
-  USER_MUTED = 'muted',
-  MESSAGE_DELETED = 'delete',
+export enum AppEvents {
   MESSAGE_PINNED = 'pinned',
-  MESSAGE_UNPINNED = 'unpinned'
+  MESSAGE_UNPINNED = 'unpinned',
+  DM_RECEIVED = 'dm-received',
+  GOOGLE_TOKEN = 'google-token',
+  DROPBOX_TOKEN = 'dropbox-token',
+  REMOTE_STORE_INITIALIZED = 'remote-store-initialized',
+  CMIX_SYNCED = 'cmix-synced'
 }
 
-export type MessageReceivedEvent = {
-  messageId: string;
-  channelId: Uint8Array;
-  update: boolean;
+export enum ChannelEvents {
+  NICKNAME_UPDATE = 1000,
+  NOTIFICATION_UPDATE = 2000,
+  MESSAGE_RECEIVED = 3000,
+  USER_MUTED = 4000,
+  MESSAGE_DELETED = 5000,
+  ADMIN_KEY_UPDATE = 6000,
+  DM_TOKEN_UPDATE = 7000
 }
 
-export const onMessageReceived = (
-  messageId: string,
-  channelId: Uint8Array,
-  update: boolean
-) => {
-  const messageEvent: MessageReceivedEvent = {
-    messageId,
-    channelId,
-    update
-  }
-
-  bus.emit(Event.MESSAGE_RECEIVED, messageEvent);
+export type ChannelEventMap = {
+  [ChannelEvents.NICKNAME_UPDATE]: NicknameUpdatedEvent;
+  [ChannelEvents.NOTIFICATION_UPDATE]: NotificationUpdateEvent;
+  [ChannelEvents.MESSAGE_RECEIVED]: MessageReceivedEvent;
+  [ChannelEvents.MESSAGE_DELETED]: MessageDeletedEvent;
+  [ChannelEvents.USER_MUTED]: UserMutedEvent;
+  [ChannelEvents.ADMIN_KEY_UPDATE]: AdminKeysUpdateEvent;
+  [ChannelEvents.DM_TOKEN_UPDATE]: DmTokenUpdateEvent;
 }
 
-export type UserMutedEvent = {
-  channelId: Uint8Array;
-  pubkey: string;
-  unmute: boolean;
+type EventHandlers = {
+  [P in keyof ChannelEventMap]: (event: ChannelEventMap[P]) => void;
+} & {
+  [AppEvents.MESSAGE_PINNED]: (event: MessagePinEvent) => void;
+  [AppEvents.MESSAGE_UNPINNED]: (event: MessageUnPinEvent) => void;
+  [AppEvents.DM_RECEIVED]: (event: DMReceivedEvent) => void;
+  [AppEvents.GOOGLE_TOKEN]: (event: string) => void;
+  [AppEvents.DROPBOX_TOKEN]: (event: string) => void;
+  [AppEvents.REMOTE_STORE_INITIALIZED]: () => void;
+  [AppEvents.CMIX_SYNCED]: (service: AccountSyncService) => void;
 }
 
-export const onMutedUser = (
-  channelId: Uint8Array,
-  pubkey: string,
-  unmute: boolean
-) => {
-  const event: UserMutedEvent = { channelId, pubkey, unmute };
-  bus.emit(Event.USER_MUTED, event);
+const cmixDecoderMap: { [P in keyof ChannelEventMap]: Decoder<ChannelEventMap[P]> } = {
+  [ChannelEvents.MESSAGE_RECEIVED]: messageReceivedEventDecoder,
+  [ChannelEvents.NOTIFICATION_UPDATE]: notificationUpdateEventDecoder,
+  [ChannelEvents.MESSAGE_DELETED]: messageDeletedEventDecoder,
+  [ChannelEvents.USER_MUTED]: userMutedEventDecoder,
+  [ChannelEvents.NICKNAME_UPDATE]: nicknameUpdatedEventDecoder,
+  [ChannelEvents.DM_TOKEN_UPDATE]: dmTokenUpdateDecoder,
+  [ChannelEvents.ADMIN_KEY_UPDATE]: adminKeysUpdateDecoder
 }
 
-export type MessageDeletedEvent = {
-  messageId: string;
-}
+export const bus = new EventEmitter() as TypedEventEmitter<EventHandlers>;
 
-export const onMessageDelete = (msgId: Uint8Array) => {
-  const messageId = Buffer.from(msgId).toString('base64');
-  const event: MessageDeletedEvent = { messageId };
-  bus.emit(Event.MESSAGE_DELETED, event);
-};
+export type ChannelEventHandler = (eventType: ChannelEvents, data: unknown) => void;
 
 export const onMessagePinned = (message: Message) => {
-  bus.emit(Event.MESSAGE_PINNED, message);
+  bus.emit(AppEvents.MESSAGE_PINNED, message);
 }
 
 export const onMessageUnpinned = (message: Message) => {
-  bus.emit(Event.MESSAGE_UNPINNED, message);
+  bus.emit(AppEvents.MESSAGE_UNPINNED, message);
 }
 
+export type DMReceivedCallback = (uuid: string, pubkey: Uint8Array, update: boolean, updateConversation: boolean) => void;
 
-export type MessagePinEvent = Message;
-export type MessageUnPinEvent = Message;
-
-export type DMReceivedEvent = {
-  messageUuid: string;
-  pubkey: Uint8Array;
-  update: boolean;
-  conversationUpdated: boolean;
-}
-
-export const onDmReceived = (
-  messageUuid: string,
-  pubkey: Uint8Array,
-  update: boolean,
-  conversationUpdated: boolean
-) => {
-  const messageEvent: DMReceivedEvent = {
-    messageUuid,
+export const onDmReceived: DMReceivedCallback = (uuid, pubkey, update, updateConversation) => {
+  bus.emit(AppEvents.DM_RECEIVED, {
+    messageUuid: uuid,
     pubkey,
     update,
-    conversationUpdated
-  }
+    conversationUpdated: updateConversation
+  });
+}
 
-  bus.emit(Event.DM_RECEIVED, messageEvent);
+export const handleChannelEvent: ChannelEventHandler = (eventType, data) => {
+  const decoder = cmixDecoderMap[eventType];
+  if (!decoder) {
+    console.warn('Unhandled event:', eventType, data);
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    bus.emit(eventType, decoder(data) as any);
+  }
 }
 
 
-export const awaitEvent = async (evt: Event) => {
+export const awaitEvent = async (evt: AppEvents | ChannelEvents, timeout = 10000) => {
   let listener: () => void = () => {};
+  let resolved = false;
+  const promise = new Promise<void>((resolve) => {
+    listener = resolve;
+    bus.addListener(evt, () => {
+      resolved = true;
+      resolve();
+    });
+  });
   await Promise.race([
-    new Promise<void>((resolve) => {
-      listener = resolve;
-      bus.addListener(evt, resolve)
-    }),
-    delay(10000) // 10 second timeout
+    promise,
+    delay(timeout).then(() => {
+      if (!resolved) {
+        throw new Error(`Awaiting event ${evt} timed out.`)
+      }
+    })
   ]);
 
   bus.removeListener(evt, listener);

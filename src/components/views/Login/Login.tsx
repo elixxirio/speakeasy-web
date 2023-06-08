@@ -2,8 +2,7 @@ import { FC, useCallback, useState } from 'react';
 import cn from 'classnames';
 import { useTranslation, Trans } from 'react-i18next';
 
-import { ModalCtaButton, Spinner } from 'src/components/common';
-import { useNetworkClient } from 'src/contexts/network-client-context';
+import { PrimaryButton, SecondaryButton, Spinner } from 'src/components/common';
 
 import s from './Login.module.scss';
 
@@ -14,31 +13,50 @@ import {
   RoadMap
 } from 'src/components/icons';
 import { useAuthentication } from '@contexts/authentication-context';
+import useAccountSync, { AccountSyncService, AccountSyncStatus } from 'src/hooks/useAccountSync';
+import GoogleButton from '@components/common/GoogleButton';
+import DropboxButton from '@components/common/DropboxButton';
 
 const LoginView: FC = () => {
   const { t } = useTranslation();
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
   const {
-    initialize
-  } = useNetworkClient();
-  const { setIsAuthenticated } = useAuthentication();
+    attemptingSyncedLogin,
+    cancelSyncLogin,
+    getOrInitPassword,
+    setIsAuthenticated,
+  } = useAuthentication();
   const [isLoading, setIsLoading] = useState(false);
+
+  const { service: accountSyncService, status: accountSyncStatus } = useAccountSync();
 
   const handleSubmit = useCallback(async () => {
     setError('');
     setIsLoading(true);
-      setTimeout(async () => {
-        try {
-          await initialize(password);
-          setIsLoading(false);
-          setIsAuthenticated(true);
-        } catch (e) {
-          setError((e as Error).message);
-          setIsLoading(false);
-        }
-      }, 1);
-  }, [initialize, password, setIsAuthenticated]);
+    setTimeout(async () => {
+      try {
+        getOrInitPassword(password);
+        setIsLoading(false);
+        setIsAuthenticated(true);
+      } catch (e) {
+        setError((e as Error).message);
+        setIsLoading(false);
+      }
+    }, 1);
+  }, [getOrInitPassword, password, setIsAuthenticated]);
+
+  const onSyncLoad = useCallback(() => {
+    setError('');
+    setIsLoading(true);
+    try {
+      getOrInitPassword(password);
+      setIsAuthenticated(true);
+    } catch (e) {
+      setError((e as Error).message);
+      setIsLoading(false);
+    }
+  }, [getOrInitPassword, password, setIsAuthenticated]);
 
   return (
     <div className={cn('', s.root)}>
@@ -89,20 +107,56 @@ const LoginView: FC = () => {
               }}
               onKeyDown={e => {
                 if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSubmit();
+                  if (accountSyncStatus !== AccountSyncStatus.Synced) {
+                    e.preventDefault();
+                    handleSubmit();
+                  }
+
+                  if (accountSyncStatus === AccountSyncStatus.Synced && accountSyncService === AccountSyncService.Dropbox) {
+                    const dropboxButton = document.getElementById('dropbox-button');
+                    dropboxButton?.click();
+                  }
+
+                  if (accountSyncStatus === AccountSyncStatus.Synced && accountSyncService === AccountSyncService.Google) {
+                    const googleButton = document.getElementById('google-auth-button');
+                    googleButton?.click();
+                  }
                 }
               }}
             />
-
-            <div className='flex flex-col mt-4'>
-              <ModalCtaButton
-                data-testid='login-button'
-                buttonCopy={t('Login')}
-                disabled={isLoading}
-                cssClass={s.button}
-                onClick={handleSubmit}
-              />
+            <div className='flex flex-col mt-4 space-y-3'>
+              {accountSyncStatus === AccountSyncStatus.Synced && accountSyncService === AccountSyncService.Google && (
+                <GoogleButton
+                  onError={() => setError(t('Something went wrong.'))}
+                  onStartLoading={onSyncLoad}
+                  disabled={isLoading}
+                  password={password}
+                />
+              )}
+              {accountSyncStatus === AccountSyncStatus.Synced && accountSyncService === AccountSyncService.Dropbox && (
+                <DropboxButton
+                  id='dropbox-button'
+                  onError={() => setError(t('Something went wrong.'))}
+                  onStartLoading={onSyncLoad}
+                  disabled={isLoading}
+                  password={password}
+                />
+              )}
+              {accountSyncStatus !== AccountSyncStatus.Synced && (
+                <PrimaryButton
+                  data-testid='login-button'
+                  disabled={isLoading}
+                  className={s.button}
+                  onClick={handleSubmit}
+                >
+                  {t('Login')}
+                </PrimaryButton>
+              )}
+              {attemptingSyncedLogin && (
+                <SecondaryButton onClick={cancelSyncLogin}>
+                  Cancel
+                </SecondaryButton>
+              )}
             </div>
             {isLoading && (
               <div className={s.loading}>

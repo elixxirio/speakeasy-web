@@ -28,7 +28,6 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
 
   useEffect(() => {
     if (!utilsLoaded) {
-
       const isReady = new Promise<void>((resolve) => {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
@@ -65,12 +64,16 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
             IsNicknameValid,
             LoadChannelsManagerWithIndexedDb,
             LoadCmix,
+            LoadNotifications,
+            LoadNotificationsDummy,
+            LoadSynchronizedCmix,
             NewChannelsDatabaseCipher,
             NewChannelsManagerWithIndexedDb,
             NewCmix,
             NewDMClientWithIndexedDb,
             NewDMsDatabaseCipher,
             NewDummyTrafficManager,
+            NewSynchronizedCmix,
             Purge,
             ValidForever,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,7 +83,11 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
 
           setUtils({
             NewCmix,
+            NewSynchronizedCmix,
             LoadCmix,
+            LoadNotifications,
+            LoadNotificationsDummy,
+            LoadSynchronizedCmix,
             GetChannelInfo,
             GenerateChannelIdentity,
             GetDefaultCMixParams,
@@ -125,7 +132,6 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
 
             window.logger = logger
           }
-
 
           setUtilsLoaded(true);
         }

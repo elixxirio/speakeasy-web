@@ -3,7 +3,7 @@ import s from './LeaveChannelConfirmationView.module.scss';
 import cn from 'classnames';
 import { useTranslation } from 'react-i18next';
 
-import { ModalCtaButton } from 'src/components/common';
+import { PrimaryButton, SecondaryButton } from 'src/components/common';
 import { useNetworkClient } from 'src/contexts/network-client-context';
 import { useUI } from 'src/contexts/ui-context';
 import * as channels from 'src/store/channels';
@@ -32,19 +32,21 @@ const LeaveChannelConfirmationView: FC = () => {
       </span>
 
       <div className='flex'>
-        <ModalCtaButton
-          buttonCopy={t('Cancel')}
-          cssClass='mt-5 mb-10 mr-5'
+        <SecondaryButton
+          className='mt-5 mb-10 mr-5'
           style={{
             borderColor: 'var(--red)'
           }}
           onClick={closeModal}
-        />
-        <ModalCtaButton
-          buttonCopy={t('Leave')}
-          cssClass='mt-5 mb-10'
+        >
+          {t('Cancel')}
+        </SecondaryButton>
+        <PrimaryButton
+          className='mt-5 mb-10'
           onClick={onLeave}
-        />
+        >
+          {t('Leave')}
+        </PrimaryButton>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import cn from 'classnames';
 import { useTranslation } from 'react-i18next';
 
 import s from './ExportCodenameView.module.scss';
-import { ModalCtaButton } from 'src/components/common';
+import { PrimaryButton } from 'src/components/common';
 import { useNetworkClient } from 'src/contexts/network-client-context';
 import { useUI } from 'src/contexts/ui-context';
 
@@ -56,11 +56,12 @@ const ExportCodenameView: FC = () => {
           {error}
         </div>
       )}
-      <ModalCtaButton
-        buttonCopy={t('Export')}
-        cssClass={cn('mt-5', s.button)}
+      <PrimaryButton
+        className={cn('mt-5', s.button)}
         onClick={handleSubmit}
-      />
+      >
+        {t('Export')}
+      </PrimaryButton>
     </div>
   );
 };

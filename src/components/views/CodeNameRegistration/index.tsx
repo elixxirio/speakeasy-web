@@ -2,16 +2,22 @@ import { FC, useState, useEffect, useCallback } from 'react';
 import cn from 'classnames';
 import { useTranslation } from 'react-i18next';
 
-import { ImportCodeNameLoading, ModalCtaButton } from 'src/components/common';
+import { ImportCodeNameLoading, PrimaryButton } from 'src/components/common';
 import { useNetworkClient } from 'src/contexts/network-client-context';
 import { Spinner } from 'src/components/common';
 
 import s from './CodeNameRegistration.module.scss';
 import Identity from 'src/components/common/Identity';
 import { AMOUNT_OF_IDENTITIES_TO_GENERATE } from 'src/constants';
+import { useAuthentication } from '@contexts/authentication-context';
 
-const CodenameRegistration: FC = () => {
+type Props = {
+  password: string;
+}
+
+const CodenameRegistration: FC<Props> = ({ password }) => {
   const { t } = useTranslation();
+  const { getOrInitPassword } = useAuthentication();
   const {
     checkRegistrationReadiness,
     cmix,
@@ -24,6 +30,10 @@ const CodenameRegistration: FC = () => {
   const [firstTimeGenerated, setFirstTimeGenerated] = useState(false);
 
   const [readyProgress, setReadyProgress] = useState<number>(0);
+
+  useEffect(() => {
+    getOrInitPassword(password);
+  }, [getOrInitPassword, password])
 
   useEffect(() => {
     if (!firstTimeGenerated && cmix) {
@@ -41,7 +51,7 @@ const CodenameRegistration: FC = () => {
           (isReadyInfo) => {
             if (isReadyInfo.isReady) {
               setTimeout(() => {
-                // setLoading(false);
+                setLoading(false);
                 // Dont mess with this, it needs exactly 3 seconds
                 // for the database to initialize
               }, 3000)
@@ -127,28 +137,31 @@ const CodenameRegistration: FC = () => {
       )}
 
       <div className='flex mb-5 mt-12'>
-        <ModalCtaButton
+        <PrimaryButton
           data-testid='discover-more-button'
-          buttonCopy={t('Discover More')}
-          cssClass={s.generateButton}
+          className={s.generateButton}
           style={{
             backgroundColor: 'var(--black-1)',
             color: 'var(--orange)',
-            borderColor: 'var(--orange)'
+            borderColor: 'var(--orange)',
+            borderWidth: '2px',
           }}
           onClick={() => {
             setSelectedCodeName('');
             setIdentites(generateIdentities(AMOUNT_OF_IDENTITIES_TO_GENERATE));
           }}
           disabled={!cmix}
-        />
-        <ModalCtaButton
+        >
+          {t('Discover More')}
+        </PrimaryButton>
+        <PrimaryButton
           data-testid='claim-codename-button'
-          buttonCopy={t('Claim')}
-          cssClass={s.registerButton}
+          className={s.registerButton}
           onClick={register}
           disabled={!cmix || selectedCodeName.length === 0}
-        />
+        >
+          {t('Claim')}
+        </PrimaryButton>
       </div>
     </div>
   );

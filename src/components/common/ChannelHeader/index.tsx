@@ -10,11 +10,13 @@ import { PrivacyLevel } from 'src/contexts/utils-context';
 import Ellipsis from '@components/icons/Ellipsis';
 import Share from '@components/icons/Share';
 import { useUI } from '@contexts/ui-context';
-import { useAppDispatch, useAppSelector } from 'src/store/hooks';
+import { useAppSelector } from 'src/store/hooks';
 import * as channels from 'src/store/channels';
 import * as app from 'src/store/app';
 
 import s from './styles.module.scss';
+import { useRemoteKV } from '@contexts/remote-kv-context';
+import Badge from '../Badge';
 
 type Props = Omit<Channel, 'name' | 'description' | 'currentPage'> & {
   name: React.ReactNode;
@@ -29,11 +31,12 @@ const ChannelHeader: FC<Props> = ({
   privacyLevel
 }) => {
   const { t } = useTranslation();
-  const dispatch = useAppDispatch();
   const currentChannel = useAppSelector(channels.selectors.currentChannel);
   const currentConversationId = useAppSelector(app.selectors.currentChannelOrConversationId);
   const channelId = currentChannel?.id || currentConversationId;
-  const isFavorite = useAppSelector(app.selectors.isChannelFavorited(channelId ?? ''))
+  const { channelFavorites: { isFavorite, toggle: toggleFavorite } } = useRemoteKV();
+
+  const isChannelFavorited = useMemo(() => isFavorite(channelId), [isFavorite, channelId])
   const { openModal, setModalView } = useUI();
   const openShareModal = useCallback(() => {
     if (currentChannel) {
@@ -49,12 +52,6 @@ const ChannelHeader: FC<Props> = ({
     }
   }, [currentChannel, openModal, setModalView]);
 
-  const toggleFavorite = useCallback(() => {
-    if (channelId && channelId !== undefined) {
-      dispatch(app.actions.toggleFavorite(channelId))
-    }
-  }, [channelId, dispatch])
-
   const privacyLevelLabels: Record<PrivacyLevel, string> = useMemo(() => ({
     [PrivacyLevel.Private]: t('Private'),
     [PrivacyLevel.Public]: t('Public'),
@@ -68,35 +65,35 @@ const ChannelHeader: FC<Props> = ({
   }), [t]);
 
   return (
-    <div className={s.root}>
+    <div data-testid='channel-header' className={s.root}>
       <div className='flex justify-between'>
         <div className={'headline--sm flex flex-wrap items-center'}>
           {privacyLevel !== null && (
-            <span
-              className={cn(s.badge, {
-                [s.gold]: privacyLevel === PrivacyLevel.Public
-              })}
+            <Badge
+              data-testid='channel-privacy-level-badge'
+              color={privacyLevel === PrivacyLevel.Public ? 'gold' : 'cyan'}
               title={privacyLevelDescriptions[privacyLevel]}
             >
               {privacyLevelLabels[privacyLevel]}
-            </span>
+            </Badge>
           )}
           {isAdmin && (
             <span
+              data-testid='channel-admin-badge'
               className={cn(s.badge, s.gold, s.outlined)}
               title={t('You have admin privileges in this channel')}
             >
             {t('Admin')}
             </span>
           )}
-          <span className={cn('mr-2', s.channelName)}>
+          <span data-testid='channel-name' className={cn('mr-2', s.channelName)}>
             {name}{' '}
           </span>
         </div>
         <div className='flex space-x-2 mt-1'>
           <FontAwesomeIcon
-            onClick={toggleFavorite}
-            className={cn(s.icon, isFavorite ? s.gold : s.grey )} icon={faStar} />
+            onClick={() => channelId && toggleFavorite(channelId)}
+            className={cn(s.icon, isChannelFavorited ? s.gold : s.grey )} icon={faStar} />
           {currentChannel && (
             <>
               <Share

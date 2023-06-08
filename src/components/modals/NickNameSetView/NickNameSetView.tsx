@@ -3,19 +3,21 @@ import s from './NickNameSetView.module.scss';
 import cn from 'classnames';
 import { useTranslation } from 'react-i18next';
 
-import { ModalCtaButton } from 'src/components/common';
+import { PrimaryButton } from 'src/components/common';
 import { useNetworkClient } from 'src/contexts/network-client-context';
 import { useUI } from 'src/contexts/ui-context';
 import * as channels from 'src/store/channels';
 import * as dms from 'src/store/dms';
 import { useAppSelector } from 'src/store/hooks';
+import * as globalSelectors from 'src/store/selectors';
 
 const NickNameSetView: FC = () => {
   const { t } = useTranslation();
   const currentChannel = useAppSelector(channels.selectors.currentChannel);
   const currentConversation = useAppSelector(dms.selectors.currentConversation);
-  const { getNickName, setNickName } = useNetworkClient();
-  const [localNickname, setLocalNickname] = useState(getNickName() || '');
+  const { setNickname: setNickName } = useNetworkClient();
+  const nickname = useAppSelector(globalSelectors.currentNickname);
+  const [localNickname, setLocalNickname] = useState(nickname || '');
   const [error, setError] = useState('');
   const { closeModal } = useUI();
 
@@ -62,11 +64,12 @@ const NickNameSetView: FC = () => {
           {error}
         </div>
       )}
-      <ModalCtaButton
-        buttonCopy={t('Save')}
-        cssClass='my-7'
+      <PrimaryButton
+        className='my-7'
         onClick={onSubmit}
-      />
+      >
+        {t('Save')}
+      </PrimaryButton>
     </div>
   );
 };

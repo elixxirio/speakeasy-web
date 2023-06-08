@@ -1,11 +1,11 @@
-import type { DBConversation, DBDirectMessage, DMClient, Identity, Message } from 'src/types';
+import type { DBConversation, DBDirectMessage, DMClient, DMReceivedEvent, Identity, Message } from 'src/types';
 import type { Conversation } from 'src/store/dms/types';
 
 import { useUtils, XXDKContext } from '@contexts/utils-context';
 import { useEffect, useMemo, useState } from 'react';
 import { MAXIMUM_PAYLOAD_BLOCK_SIZE, DMS_WORKER_JS_PATH, DMS_DATABASE_NAME as DMS_DATABASE_NAME } from 'src/constants';
 import { decoder } from '@utils/index';
-import { onDmReceived, DMReceivedEvent, Event, bus } from 'src/events';
+import { onDmReceived, AppEvents, bus } from 'src/events';
 import { useDb } from '@contexts/db-context';
 import { useAppDispatch, useAppSelector } from 'src/store/hooks';
 import * as dms from 'src/store/dms';
@@ -58,7 +58,7 @@ const makeMessageMapper = (
 const useDmClient = (
   cmixId?: number,
   privateIdentity?: Uint8Array,
-  decryptedInternalPassword?: Uint8Array
+  encryptedInternalPassword?: Uint8Array
 ) => {
   const { dmReceived } = useNotification();
   const dmsDb = useDb('dm');
@@ -106,10 +106,10 @@ const useDmClient = (
   }, [client, dmsDatabaseName, setDmsDatabaseName]);
 
   useEffect(() => {
-    if (cmixId !== undefined && decryptedInternalPassword) {
+    if (cmixId !== undefined && encryptedInternalPassword) {
       const cipher = utils.NewDMsDatabaseCipher(
         cmixId,
-        decryptedInternalPassword,
+        encryptedInternalPassword,
         MAXIMUM_PAYLOAD_BLOCK_SIZE
       );
   
@@ -120,7 +120,7 @@ const useDmClient = (
         ),
       })
     }
-  }, [cmixId, decryptedInternalPassword, utils]);
+  }, [cmixId, encryptedInternalPassword, utils]);
 
   useEffect(() => {
     if (!databaseCipher || cmixId === undefined || !privateIdentity || client) { return; }
@@ -212,9 +212,9 @@ const useDmClient = (
       });
     }
 
-    bus.addListener(Event.DM_RECEIVED, listener);
+    bus.addListener(AppEvents.DM_RECEIVED, listener);
 
-    return () => { bus.removeListener(Event.DM_RECEIVED, listener) };
+    return () => { bus.removeListener(AppEvents.DM_RECEIVED, listener) };
   }, [
     allDms,
     conversationMapper,

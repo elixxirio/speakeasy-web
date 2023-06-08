@@ -20,6 +20,7 @@ import Identity from '../Identity';
 import SearchInput from '../SearchInput';
 import useInput from 'src/hooks/useInput';
 import { Contributor } from '@types';
+import { useRemoteKV } from '@contexts/remote-kv-context';
 
 type ChannelListItemProps = {
   currentId: string | null,
@@ -74,8 +75,8 @@ const LeftSideBar: FC<{ cssClasses?: string; }> = ({ cssClasses }) => {
     getClientVersion,
     getVersion,
   } = useNetworkClient();
+  const { channelFavorites: { favorites }} = useRemoteKV();
 
-  const channelFavorites = useAppSelector(app.selectors.channelFavorites);
   const currentId = useAppSelector(app.selectors.currentChannelOrConversationId);
   const channelsSearch = useAppSelector(app.selectors.channelsSearch);
   const drafts = useAppSelector((state) => state.app.messageDraftsByChannelId);
@@ -103,6 +104,7 @@ const LeftSideBar: FC<{ cssClasses?: string; }> = ({ cssClasses }) => {
       <span>{t('Joined')}</span>
       <div className='flex items-center'>
         <Plus
+          data-testid='create-channel-dropdown-button'
           className={cn('mr-1', s.plus, {})}
           onClick={(e) => {
             if (e && e.stopPropagation) {
@@ -153,10 +155,10 @@ const LeftSideBar: FC<{ cssClasses?: string; }> = ({ cssClasses }) => {
   }, [allConversations, dispatch])
 
   return (
-    <div className={cn(s.root, cssClasses)}>
+    <div data-testid='left-side-bar' className={cn(s.root, cssClasses)}>
       <div className={s.header}>
         <div className={s.logo}>
-          <SpeakEasy />
+          <SpeakEasy data-testid='main-speakeasy-logo' />
         </div>
         <NetworkStatusIcon />
       </div>
@@ -168,7 +170,10 @@ const LeftSideBar: FC<{ cssClasses?: string; }> = ({ cssClasses }) => {
           <Dropdown isOpen={showCreateNewChannel} onChange={setShowCreateNewChannel}>
             <ul style={{ backgroundColor: 'var(--dark-2)', zIndex: 2 }} className='text-right w-full rounded-lg p-2 bold'>
               <li className='px-2 py-1'>
-                <button className='underline' onClick={() => {
+                <button
+                  data-testid='create-channel-button'
+                  className='underline'
+                  onClick={() => {
                   setModalView('CREATE_CHANNEL');
                   openModal();
                   setShowCreateNewChannel(false);
@@ -194,7 +199,7 @@ const LeftSideBar: FC<{ cssClasses?: string; }> = ({ cssClasses }) => {
               <ChannelListItem
                 key={ch.id}
                 {...ch}
-                isFavorite={channelFavorites.includes(ch.id)}
+                isFavorite={favorites.includes(ch.id)}
                 currentId={currentId}
                 onClick={selectChannel(ch.id)}
                 notification={!!missedMessages[ch.id]}
@@ -234,7 +239,7 @@ const LeftSideBar: FC<{ cssClasses?: string; }> = ({ cssClasses }) => {
               key={c.pubkey}
               id={c.pubkey}
               currentId={currentId}
-              isFavorite={channelFavorites.includes(c.pubkey)}
+              isFavorite={favorites.includes(c.pubkey)}
               onClick={selectChannel(c.pubkey)}
               name={<Identity {...c} />}
               notification={!!missedMessages[c.pubkey]}

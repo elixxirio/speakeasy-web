@@ -1,14 +1,37 @@
-import { ChannelJSON, IdentityJSON, IsReadyInfoJSON, ShareURLJSON, VersionJSON } from 'src/types';
+import { AdminKeysUpdateEvent, AllowList, AllowLists, ChannelId, ChannelJSON, DmTokenUpdateEvent, IdentityJSON, IsReadyInfoJSON, MessageDeletedEvent, MessageReceivedEvent, NicknameUpdatedEvent, NotificationFilter, NotificationLevel, NotificationState, NotificationStatus, NotificationUpdateEvent, ShareURLJSON, UserMutedEvent, VersionJSON } from 'src/types';
+import { KVEntry } from 'src/types/collective';
 import { Err, JsonDecoder } from 'ts.data.json';
+import { decoder as uintDecoder } from './index';
+
+
+const attemptParse = (object: unknown) => {
+  let parsed = object;
+  if (typeof object === 'string') {
+    try {
+      parsed = JSON.parse(object);
+    } catch (e) {
+      console.error('Failed to parse string in decoder', object);
+    }
+  }
+  return parsed;
+}
 
 export const makeDecoder = <T>(decoder: JsonDecoder.Decoder<T>) => (thing: unknown): T => {
-  const result = decoder.decode(thing);
+  const object = thing instanceof Uint8Array ? uintDecoder.decode(thing) : thing;
+  const parsed = typeof object === 'string' ? attemptParse(object) : object;
+  const result = decoder.decode(parsed);
   if (result instanceof Err) {
-    throw new Error(`Unexpected JSON: ${JSON.stringify(thing)}, Error: ${result.error}`);
+    throw new Error(`Unexpected JSON: ${JSON.stringify(parsed)}, Error: ${result.error}`);
   } else {
     return result.value;
   }
 }
+
+export type Decoder<T> = ReturnType<typeof makeDecoder<T>>;
+
+const uint8ArrayDecoder = JsonDecoder.array(JsonDecoder.number, 'Uint8Decoder');
+
+const uint8ArrayToStringDecoder = uint8ArrayDecoder.map((uintArray) => uintDecoder.decode(uintArray as unknown as Uint8Array))
 
 export const channelDecoder = makeDecoder(JsonDecoder.object<ChannelJSON>(
   {
@@ -44,10 +67,13 @@ export const identityDecoder = makeDecoder(JsonDecoder.object<IdentityJSON>(
   }
 ));
 
-export const shareUrlDecoder = makeDecoder(JsonDecoder.object<ShareURLJSON>({
-  password: JsonDecoder.optional(JsonDecoder.string),
-  url: JsonDecoder.string
-}, 'ShareUrlDecoder'));
+export const shareUrlDecoder = makeDecoder(JsonDecoder.object<ShareURLJSON>(
+  {
+    password: JsonDecoder.optional(JsonDecoder.string),
+    url: JsonDecoder.string
+  },
+  'ShareUrlDecoder'
+));
 
 export const isReadyInfoDecoder = makeDecoder(JsonDecoder.object<IsReadyInfoJSON>({
   isReady: JsonDecoder.boolean,
@@ -59,8 +85,152 @@ export const isReadyInfoDecoder = makeDecoder(JsonDecoder.object<IsReadyInfoJSON
 
 export const pubkeyArrayDecoder = makeDecoder(JsonDecoder.array<string>(JsonDecoder.string, 'PubkeyArrayDecoder'));
 
-export const versionDecoder = makeDecoder(JsonDecoder.object<VersionJSON>({
-  current: JsonDecoder.string,
-  updated: JsonDecoder.boolean,
-  old: JsonDecoder.string
-}, 'VersionDecoder'));
+export const versionDecoder = makeDecoder(JsonDecoder.object<VersionJSON>(
+  {
+    current: JsonDecoder.string,
+    updated: JsonDecoder.boolean,
+    old: JsonDecoder.string
+  },
+  'VersionDecoder'
+));
+
+export const kvEntryDecoder = makeDecoder(JsonDecoder.object<KVEntry>(
+  {
+    data: JsonDecoder.string,
+    version: JsonDecoder.number,
+    timestamp: JsonDecoder.string,
+  }, 'KVEntryDecoder', {
+    data: 'Data',
+    version: 'Version',
+    timestamp: 'Timestamp'
+  }
+));
+
+export const messageReceivedEventDecoder = makeDecoder(JsonDecoder.object<MessageReceivedEvent>(
+  {
+    uuid: JsonDecoder.number,
+    channelId: JsonDecoder.string,
+    update: JsonDecoder.boolean,
+  },
+  'MessageReceivedEventDecoder',
+  {
+    channelId: 'channelID',
+  }
+));
+
+export const userMutedEventDecoder = makeDecoder(JsonDecoder.object<UserMutedEvent>(
+  {
+    channelId: uint8ArrayToStringDecoder,
+    pubkey: JsonDecoder.string,
+    unmute: JsonDecoder.boolean,
+  },
+  'UserMutedEventDecoder',
+  {
+    pubkey: 'PubKey',
+    channelId: 'ChannelId',
+    unmute: 'Unmute'
+  }
+));
+
+const messageIdDecoder = uint8ArrayDecoder.map((s) => Buffer.from(s).toString('base64'))
+
+export const messageDeletedEventDecoder = makeDecoder(JsonDecoder.object<MessageDeletedEvent>(
+  {
+    messageId: messageIdDecoder,
+  },
+  'MessageDeletedDecoder',
+  {
+    messageId: 'MessageId'
+  }
+));
+
+export const nicknameUpdatedEventDecoder = makeDecoder(JsonDecoder.object<NicknameUpdatedEvent>(
+  {
+    channelId: JsonDecoder.string,
+    nickname: JsonDecoder.string,
+    exists: JsonDecoder.boolean
+  },
+  'NicknameUpdatedEventDecoder',
+  {
+    channelId: 'channelID',
+  }
+));
+
+const allowListDecoder = JsonDecoder.dictionary<AllowList>(JsonDecoder.emptyObject, 'AllowListDecoder');
+const allowListsDecoder = JsonDecoder.object<AllowLists>(
+  {
+    allowWithoutTags: allowListDecoder,
+    allowWithTags: allowListDecoder,
+  },
+  'AllowListsDecoder',
+  {
+    allowWithoutTags: 'AllowWithoutTags',
+    allowWithTags: 'AllowWithTags'
+  }
+)
+
+const notificationFilterDecoder = JsonDecoder.object<NotificationFilter>(
+  {
+    id: uint8ArrayToStringDecoder,
+    channelId: uint8ArrayToStringDecoder,
+    tags: JsonDecoder.array<string>(JsonDecoder.string, 'TagsDecoder'),
+    allowLists: allowListsDecoder
+  },
+  'NotificationFilterDecoder',
+  {
+    id: 'Identifier',
+    channelId: 'ChannelID',
+    tags: 'Tags',
+    allowLists: 'AllowLists'
+  }
+);
+
+export const notificationLevelDecoder = JsonDecoder.enumeration<NotificationLevel>(NotificationLevel, 'NotificationLevelDecoder');
+const notificationStatusDecoder = JsonDecoder.enumeration<NotificationStatus>(NotificationStatus, 'NotificationStatusDecoder');
+const notificationStateDecoder = JsonDecoder.object<NotificationState>(
+  {
+    channelId: uint8ArrayToStringDecoder,
+    level: notificationLevelDecoder,
+    status: notificationStatusDecoder
+  },
+  'NotificationStateDecoder',
+  {
+    channelId: 'ChannelID',
+    level: 'Level',
+    status: 'Status'
+  }
+);
+
+export const notificationUpdateEventDecoder = makeDecoder(JsonDecoder.object<NotificationUpdateEvent>(
+  {
+    notificationFilters: JsonDecoder.array<NotificationFilter>(notificationFilterDecoder, 'NotificationFilterArrayDecoder'),
+    changedNotificationStates: JsonDecoder.array<NotificationState>(notificationStateDecoder, 'ChangedNotificationStatesDecoder'),
+    deletedNotificationStates: JsonDecoder.nullable(JsonDecoder.array<ChannelId>(uint8ArrayToStringDecoder, 'DeletedNotificationStatesDecoder')),
+    maxState: JsonDecoder.number
+  },
+  'NotificationUpdateEventDecoder',
+))
+
+export const channelFavoritesDecoder = makeDecoder(JsonDecoder.array<string>(JsonDecoder.string, 'ChannelFavoritesDecoder'))
+
+export const adminKeysUpdateDecoder = makeDecoder(JsonDecoder.object<AdminKeysUpdateEvent>(
+  {
+    channelId: JsonDecoder.string,
+  },
+  'AdminKeysUpdateDecoder',
+  {
+    channelId: 'channelID',
+  }
+));
+
+export const dmTokenUpdateDecoder = makeDecoder(JsonDecoder.object<DmTokenUpdateEvent>(
+  {
+    channelId: uint8ArrayToStringDecoder,
+    tokenEnabled: JsonDecoder.boolean
+  },
+  'DmTokenUpdateDecoder',
+  {
+    channelId: 'ChannelId',
+    tokenEnabled: 'SendToken'
+  }
+));

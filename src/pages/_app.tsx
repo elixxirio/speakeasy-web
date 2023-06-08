@@ -12,10 +12,9 @@ import { useTranslation } from 'react-i18next';
 import store from 'src/store';
 import { ManagedUIContext } from 'src/contexts/ui-context';
 import { ManagedNetworkContext } from 'src/contexts/network-client-context';
-import { ManagedAuthenticationContext } from 'src/contexts/authentication-context';
+import { AuthenticationProvider } from 'src/contexts/authentication-context';
 import { UtilsProvider } from 'src/contexts/utils-context';
 import { isDuplicatedWindow } from 'src/utils/oneTabEnforcer';
-import { WebAssemblyRunner } from 'src/components/common';
 
 import 'src/assets/scss/main.scss';
 import 'src/assets/scss/quill-overrides.scss';
@@ -84,6 +83,26 @@ const SEO = () => {
   );
 };
 
+const Providers: FC<WithChildren> = ({ children }) => (
+  <GoogleOAuthProvider
+    clientId={process.env.NEXT_PUBLIC_APP_GOOGLE_DRIVE_CLIENT_ID ?? ''}
+  >
+    <DBProvider>
+      <Provider store={store}>
+        <UtilsProvider>
+          <AuthenticationProvider>
+            <ManagedNetworkContext>
+              <ManagedUIContext>
+                {children}
+              </ManagedUIContext>
+            </ManagedNetworkContext>
+          </AuthenticationProvider>
+        </UtilsProvider>
+      </Provider>
+    </DBProvider>
+  </GoogleOAuthProvider>
+);
+
 const SpeakeasyApp = ({ Component, pageProps }: AppProps) => {
   const { t } = useTranslation();
   const [shouldRender, setShouldRender] = useState(false);
@@ -105,6 +124,9 @@ const SpeakeasyApp = ({ Component, pageProps }: AppProps) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const skipDuplicateTabCheck = (Component as any).skipDuplicateTabCheck;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const AllProviders = (Component as any).skipProviders ? React.Fragment : Providers;
+
   if (shouldRender) {
     return (
       <ErrorBoundary>
@@ -113,36 +135,20 @@ const SpeakeasyApp = ({ Component, pageProps }: AppProps) => {
           <link rel='icon' href='/favicon.svg' />
         </Head>
         <SEO />
-        <GoogleOAuthProvider
-          clientId={process.env.NEXT_PUBLIC_APP_GOOGLE_DRIVE_CLIENT_ID ?? ''}
-        >
-          <DBProvider>
-            <Provider store={store}>
-              <UtilsProvider>
-                <ManagedAuthenticationContext>
-                  <ManagedNetworkContext>
-                    <ManagedUIContext>
-                      <WebAssemblyRunner>
-                        {!skipDuplicateTabCheck &&
-                        isDuplicatedWindow(15000, 10000, 'MyApp') ? (
-                          <WarningComponent>
-                            {t('Speakeasy can only run with one tab/window at a time.')}
-                            <br />
-                            {t('Return to your Speakeasy home tab to continue.')}
-                          </WarningComponent>
-                        ) : (
-                          <Layout pageProps={{ ...pageProps }}>
-                            <Component {...pageProps} />
-                          </Layout>
-                        )}
-                      </WebAssemblyRunner>
-                    </ManagedUIContext>
-                  </ManagedNetworkContext>
-                </ManagedAuthenticationContext>
-              </UtilsProvider>
-            </Provider>
-          </DBProvider>
-        </GoogleOAuthProvider>
+        <AllProviders>
+          {!skipDuplicateTabCheck &&
+          isDuplicatedWindow(15000, 10000, 'SpeakeasyApp') ? (
+            <WarningComponent>
+              {t('Speakeasy can only run with one tab/window at a time.')}
+              <br />
+              {t('Return to your Speakeasy home tab to continue.')}
+            </WarningComponent>
+          ) : (
+            <Layout pageProps={{ ...pageProps }}>
+              <Component {...pageProps} />
+            </Layout>
+          )}
+        </AllProviders>
       </ErrorBoundary>
     );
   } else {
