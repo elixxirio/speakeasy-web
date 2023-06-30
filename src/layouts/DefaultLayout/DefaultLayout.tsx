@@ -15,7 +15,6 @@ import NotificationBanner from 'src/components/common/NotificationBanner';
 import {
   CreateChannelView,
   ClaimAdminKeys,
-  LoadingView,
   JoinChannelView,
   ShareChannelView,
   LeaveChannelConfirmationView,
@@ -31,6 +30,7 @@ import {
   ExportAdminKeys
 } from 'src/components/modals';
 
+
 import s from './DefaultLayout.module.scss';
 import ViewMutedUsers from '@components/modals/ViewMutedUsers';
 import UpdatesModal from '../../components/modals/UpdatesModal';
@@ -41,6 +41,9 @@ import UserInfoDrawer from '@components/common/UserInfoDrawer';
 import AccountSyncView from '@components/modals/AccountSync';
 import useAccountSync, { AccountSyncStatus } from 'src/hooks/useAccountSync';
 import { NetworkStatus } from 'src/hooks/useCmix';
+import useEvents from 'src/hooks/useEvents';
+import useGoogleRemoteStore from 'src/hooks/useGoogleRemoteStore';
+import useDropboxRemoteStore from 'src/hooks/useDropboxRemoteStore';
 
 type ModalMap = Omit<Record<ModalViews, React.ReactNode>, 'IMPORT_CODENAME'>;
 
@@ -57,7 +60,7 @@ const AuthenticatedUserModals: FC = () => {
     CREATE_CHANNEL: <CreateChannelView />,
     JOIN_CHANNEL: <JoinChannelView />,
     LOGOUT: <LogoutView />,
-    LOADING: <LoadingView />,
+    LOADING: <></>,
     LEAVE_CHANNEL_CONFIRMATION: <LeaveChannelConfirmationView />,
     SET_NICK_NAME: <NickNameSetView />,
     CHANNEL_SETTINGS: <ChannelSettingsView />,
@@ -71,6 +74,7 @@ const AuthenticatedUserModals: FC = () => {
 
   return displayModal && modalView && modalView !== 'IMPORT_CODENAME' ? (
     <Modal
+      loading={modalView === 'LOADING'}
       closeable={closeableOverride}
       className={s[modalClass]} onClose={closeModal}>
       {modals[modalView]}
@@ -81,9 +85,12 @@ const AuthenticatedUserModals: FC = () => {
 const DefaultLayout: FC<WithChildren> = ({
   children,
 }) => {
+  useGoogleRemoteStore();
+  useDropboxRemoteStore();
+  useEvents();
   const accountSync = useAccountSync();
   const router = useRouter();
-  const { isAuthenticated, storageTag } = useAuthentication();
+  const { isAuthenticated } = useAuthentication();
   const {
     cmix,
     getShareUrlType,
@@ -100,7 +107,6 @@ const DefaultLayout: FC<WithChildren> = ({
       cmix &&
       networkStatus === NetworkStatus.CONNECTED &&
       isAuthenticated &&
-      storageTag &&
       window.location.search
     ) {
       setChannelInviteLink(window.location.href);
@@ -111,7 +117,6 @@ const DefaultLayout: FC<WithChildren> = ({
     cmix,
     isAuthenticated,
     networkStatus,
-    storageTag,
     getShareUrlType,
     setChannelInviteLink,
     setModalView,
@@ -125,7 +130,6 @@ const DefaultLayout: FC<WithChildren> = ({
       openModal()
     }
   }, [accountSync.status, isAuthenticated, networkStatus, openModal, setModalView]);
-
 
   useEffect(() => {
     const adjustActiveState = () => {

@@ -29,10 +29,12 @@ export type RemoteKV = {
   Get: (key: string, version: number) => Promise<Uint8Array>;
   Delete: (key: string, version: number) => Promise<void>;
   Set: (key: string, encodedKVMapEntry: Uint8Array) => Promise<void>;
-  ListenOnRemoteKey: (key: string, version: number, onChange: KeyChangedByRemoteCallback) => Promise<void>
+  ListenOnRemoteKey: (key: string, version: number, onChange: KeyChangedByRemoteCallback) => number;
+  DeleteRemoteKeyListener: (key: string, id: number) => void;
 }
 
 export interface RemoteStoreServiceWrapper {
+  service: AccountSyncService;
   Read: (path: string) => Promise<Uint8Array | null>;
   Write: (path: string, data: Uint8Array) => Promise<void>;
   GetLastModified: (path: string) => Promise<string | null>;
@@ -47,8 +49,8 @@ export class RemoteStore {
 
   service: AccountSyncService;
 
-  constructor(service: AccountSyncService, store: RemoteStoreServiceWrapper) {
-    this.service = service;
+  constructor(store: RemoteStoreServiceWrapper) {
+    this.service = store.service;
     this.store = store;
   }
 

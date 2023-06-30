@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { encoder } from '@utils/index';
 import useGoogleDrive from './useGoogleDrive';
 import useGoogleApi from './useGoogleApi';
 import { RemoteStore } from 'src/types/collective';
-import { AppEvents, bus } from 'src/events';
-import { AccountSyncService } from './useAccountSync';
+import { AppEvents, appBus as bus } from 'src/events';
+import useAccountSync, { AccountSyncService, AccountSyncStatus } from './useAccountSync';
+import { useRemoteStore } from '@contexts/remote-kv-context';
 
 const fileIdCache = new Map<string, string>();
 
@@ -30,6 +31,8 @@ const useGoogleRemoteStore = () => {
   const [accessToken, setAccessToken] = useState<string>();
   const { gapi } = useGoogleApi();
   const { drive } = useGoogleDrive(gapi, accessToken);
+  const [remoteStore, setRemoteStore] = useRemoteStore();
+  const accountSync = useAccountSync();
 
   useEffect(() => {
     bus.addListener(AppEvents.GOOGLE_TOKEN, setAccessToken);
@@ -167,28 +170,23 @@ const useGoogleRemoteStore = () => {
       const id = await uploadBinaryFile(prefixed, data);
       fileIdCache.set(prefixed, id);
     }
-  }, [getFileId, updateFile, uploadBinaryFile])
+  }, [getFileId, updateFile, uploadBinaryFile]);
 
-  const store = useMemo(
-    () => (drive && accessToken) ? new RemoteStore(AccountSyncService.Google, {
-      Write: writeFile,
-      Read: getBinaryFile,
-      GetLastModified: getLastModified,
-      ReadDir: readDir,
-      DeleteAll: deleteAllFiles,
-    }) : undefined,
-    [
-      accessToken,
-      deleteAllFiles,
-      drive,
-      getBinaryFile,
-      getLastModified,
-      readDir,
-      writeFile,
-    ]
-  );
-
-  return store;
+  useEffect(() => {
+    if (drive && accessToken && !remoteStore) {
+      setRemoteStore(new RemoteStore({
+        service: AccountSyncService.Google, 
+        Write: writeFile,
+        Read: getBinaryFile,
+        GetLastModified: getLastModified,
+        ReadDir: readDir,
+        DeleteAll: deleteAllFiles,
+      }));
+      accountSync.setStatus(AccountSyncStatus.Synced);
+      accountSync.setService(AccountSyncService.Google);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken, deleteAllFiles, drive, getBinaryFile, getLastModified, readDir, writeFile])
 }
 
 export default useGoogleRemoteStore;

@@ -39,10 +39,12 @@ const ChannelSettingsView: FC = () => {
 
   const changeNotificationLevel = useCallback((level: NotificationLevel) => {
     if (currentChannel?.id) {
+      const status = notificationStatus || NotificationStatus.WhenOpen;
+
       channelManager?.SetMobileNotificationsLevel(
         utils.Base64ToUint8Array(currentChannel?.id),
         level,
-        notificationStatus || NotificationStatus.WhenOpen,
+        status,
       )
     }
   }, [channelManager, currentChannel?.id, notificationStatus, utils]);
@@ -58,13 +60,15 @@ const ChannelSettingsView: FC = () => {
 
   const changeNotificationStatus = useCallback((status: NotificationStatus) => {
     if (currentChannel?.id) {
+      const level = status === NotificationStatus.Mute ? NotificationLevel.NotifyNone : (notificationLevel || NotificationLevel.NotifyPing);
+      
       channelManager?.SetMobileNotificationsLevel(
         utils.Base64ToUint8Array(currentChannel?.id),
-        notificationLevel || NotificationLevel.NotifyPing,
+        level,
         status,
       )
     }
-  }, [channelManager, currentChannel?.id, notificationLevel, utils]);
+  }, [channelManager, currentChannel?.id, utils, notificationLevel]);
 
   const onNotificationStatusChange = useCallback<ChangeEventHandler<HTMLSelectElement>>((evt) => {
     const status = notificationStatusDecoder.decode(parseInt(evt.target.value, 10));
@@ -81,7 +85,8 @@ const ChannelSettingsView: FC = () => {
         className={cn(s.root, 'w-full flex flex-col justify-center items-center')}
       >
         <h2 className='mt-9 mb-8'>
-          {t('Channel Settings')}</h2>
+          {t('Channel Settings')}
+        </h2>
         <div className={s.wrapper}>
           <div>
             <h3 className='headline--sm'>

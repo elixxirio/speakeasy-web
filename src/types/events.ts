@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ChannelId } from 'src/store/channels/types';
 import type { Message } from 'src/store/messages/types';
-import { MessageType } from './db';
+import type { MessageType } from './db';
 
 export type MessageReceivedEvent = {
   uuid: number;
@@ -24,8 +24,8 @@ export type UserMutedEvent = {
 }
 
 export type DMReceivedEvent = {
-  messageUuid: string;
-  pubkey: Uint8Array;
+  uuid: number;
+  pubkey: string;
   update: boolean;
   conversationUpdated: boolean;
 }
@@ -40,23 +40,24 @@ export type AdminKeysUpdateEvent = {
   channelId: string;
 }
 
-export type DmTokenUpdateEvent = {
-  channelId: string;
-  tokenEnabled: boolean;
+export enum ChannelStatus {
+  SYNC_CREATED = 0,
+  SYNC_UPDATED = 1,
+  SYNC_DELETED = 2,
+  SYNC_LOADED = 3
 }
+
+export type ChannelUpdateEvent = {
+  channelId: string;
+  status: ChannelStatus;
+  tokenEnabled: boolean;
+};
 
 export type AllowList = Partial<Record<MessageType, Record<string, unknown>>>;
 
 export type AllowLists = {
   allowWithTags: AllowList;
   allowWithoutTags: AllowList;
-}
-
-export type NotificationFilter = {
-  id: string;
-  channelId: string;
-  tags: string[];
-  allowLists: AllowLists;
 }
 
 export enum NotificationLevel {
@@ -78,8 +79,21 @@ export type NotificationState = {
 }
 
 export type NotificationUpdateEvent = {
-  notificationFilters?: NotificationFilter[];
-  changedNotificationStates: NotificationState[];
-  deletedNotificationStates: ChannelId[] | null;
-  maxState: number;
+  changedNotificationStates?: NotificationState[];
+  deletedNotificationStates?: ChannelId[] | null;
+}
+
+export type DMNotificationLevelState = {
+  pubkey: string;
+  level: NotificationLevel
+}
+
+export type DMNotificationsUpdateEvent = {
+  changedNotificationStates: DMNotificationLevelState[];
+  deletedNotificationStates: string[];
+}
+
+export type DMBlockedUserEvent = {
+  pubkey: string;
+  blocked: boolean;
 }

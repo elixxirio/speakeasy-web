@@ -1,6 +1,7 @@
 import type { WithChildren } from '@types';
 
 import { FC, useEffect } from 'react';
+import { XXDK_PATH } from 'src/constants';
 
 import { useUtils } from 'src/contexts/utils-context';
 
@@ -40,8 +41,8 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
         '--fileLogLevel=1',
         '--workerScriptURL=integrations/assets/logFileWorker.js',
       ]
-      const binPath = '/integrations/assets/xxdk.wasm';
-      WebAssembly?.instantiateStreaming(fetch(binPath), go.importObject).then(
+      
+      WebAssembly?.instantiateStreaming(fetch(XXDK_PATH), go.importObject).then(
         async (result) => {
           go?.run(result?.instance);
           await isReady;
@@ -67,11 +68,10 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
             LoadNotifications,
             LoadNotificationsDummy,
             LoadSynchronizedCmix,
-            NewChannelsDatabaseCipher,
             NewChannelsManagerWithIndexedDb,
             NewCmix,
             NewDMClientWithIndexedDb,
-            NewDMsDatabaseCipher,
+            NewDatabaseCipher,
             NewDummyTrafficManager,
             NewSynchronizedCmix,
             Purge,
@@ -107,9 +107,8 @@ const WebAssemblyRunner: FC<WithChildren> = ({ children }) => {
             DecodePublicURL,
             GetChannelJSON,
             NewDMClientWithIndexedDb,
-            NewDMsDatabaseCipher,
+            NewDatabaseCipher,
             NewDummyTrafficManager,
-            NewChannelsDatabaseCipher,
             Purge,
             ValidForever
           });

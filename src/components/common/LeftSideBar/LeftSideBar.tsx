@@ -33,7 +33,7 @@ type ChannelListItemProps = {
 }
 
 const ChannelListItem: FC<ChannelListItemProps> = ({ currentId, hasDraft, id, isFavorite, name, notification, onClick }) => {
-  return(
+  return (
     <div className='flex justify-between items-center' key={id}>
       <span
         className={cn(s.channelPill, 'headline--xs flex justify-between items-center', {
@@ -79,7 +79,7 @@ const LeftSideBar: FC<{ cssClasses?: string; }> = ({ cssClasses }) => {
   const currentId = useAppSelector(app.selectors.currentChannelOrConversationId);
   const channelsSearch = useAppSelector(app.selectors.channelsSearch);
   const drafts = useAppSelector((state) => state.app.messageDraftsByChannelId);
-  const allChannels = useAppSelector(channels.selectors.searchFilteredChannels);
+  const allChannels = useAppSelector(channels.selectors.searchFilteredChannels(favorites));
   const missedMessages = useAppSelector(app.selectors.missedMessages);
   const allConversations = useAppSelector(dms.selectors.searchFilteredConversations(favorites));
   const messageableContributors = useAppSelector(msgs.selectors.messageableContributors);
@@ -225,7 +225,7 @@ const LeftSideBar: FC<{ cssClasses?: string; }> = ({ cssClasses }) => {
                       textOverflow: 'ellipsis',
                       color: 'var(--text-muted)'
                     }}>
-                    <Identity {...c} />
+                    <Identity disableMuteStyles  {...c} />
                   </button>
                 ))}
               </div>
@@ -240,7 +240,7 @@ const LeftSideBar: FC<{ cssClasses?: string; }> = ({ cssClasses }) => {
               currentId={currentId}
               isFavorite={favorites.includes(c.pubkey)}
               onClick={selectChannel(c.pubkey)}
-              name={<Identity {...c} />}
+              name={<Identity disableMuteStyles {...c} />}
               notification={!!missedMessages[c.pubkey]}
               hasDraft={!!drafts[c.pubkey]}
             />

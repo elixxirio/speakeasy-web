@@ -1,13 +1,16 @@
 import { Dropbox } from 'dropbox';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import assert from 'assert';
 
-import { AppEvents, bus } from 'src/events';
+import { AppEvents, appBus as bus } from 'src/events';
 import { RemoteStore } from 'src/types/collective';
-import { AccountSyncService } from './useAccountSync';
+import useAccountSync, { AccountSyncService, AccountSyncStatus } from './useAccountSync';
+import { useRemoteStore } from '@contexts/remote-kv-context';
 
 const useDropboxRemoteStore = () => {
   const [dropbox, setDropbox] = useState<Dropbox>();
+  const [remoteStore, setStore] = useRemoteStore();
+  const { setService, setStatus } = useAccountSync();
 
   useEffect(() => {
     const onToken = (accessToken: string) => {
@@ -21,6 +24,16 @@ const useDropboxRemoteStore = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const listener = () => {
+      setStore(undefined);
+    };
+
+    bus.addListener(AppEvents.NEW_SYNC_CMIX_FAILED, listener);
+
+    return () => { bus.removeListener(AppEvents.NEW_SYNC_CMIX_FAILED, listener) }
+  }, [setStore]);
+
   const getBinaryFile = useCallback(async (name: string) => {
     assert(dropbox);
     const path = name.charAt(0) !== '/' ? `/${name}` : name;
@@ -31,7 +44,7 @@ const useDropboxRemoteStore = () => {
     return new Uint8Array(buffer);
   }, [dropbox]);
 
-  const writeBinaryFile = useCallback(async (path: string, data: Uint8Array) => {
+  const writeFile = useCallback(async (path: string, data: Uint8Array) => {
     assert(dropbox);
 
     const prefixedPath = path.charAt(0) !== '/' ? `/${path}` : path;
@@ -65,15 +78,20 @@ const useDropboxRemoteStore = () => {
     await dropbox.filesDeleteBatch({ entries })
   }, [dropbox]);
 
-  const store = useMemo(() => dropbox && new RemoteStore(AccountSyncService.Dropbox, {
-    Read: getBinaryFile,
-    Write: writeBinaryFile,
-    GetLastModified: getLastModified,
-    ReadDir: readDir,
-    DeleteAll: deleteAllFiles
-  }), [deleteAllFiles, dropbox, getBinaryFile, getLastModified, readDir, writeBinaryFile]); 
-
-  return store;
+  useEffect(() => {
+    if (dropbox && !remoteStore) { 
+      setStore(new RemoteStore({
+        service: AccountSyncService.Dropbox,
+        Write: writeFile,
+        Read: getBinaryFile,
+        GetLastModified: getLastModified,
+        ReadDir: readDir,
+        DeleteAll: deleteAllFiles,
+      }));
+      setStatus(AccountSyncStatus.Synced);
+      setService(AccountSyncService.Dropbox);
+    }
+  }, [deleteAllFiles, dropbox, getBinaryFile, getLastModified, readDir, setStore, writeFile, setStatus, setService, remoteStore]);
 }
 
 export default useDropboxRemoteStore;

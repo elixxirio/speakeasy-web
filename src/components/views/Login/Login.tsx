@@ -1,4 +1,4 @@
-import { FC, useCallback, useState } from 'react';
+import { FC, useCallback, useEffect, useState } from 'react';
 import cn from 'classnames';
 import { useTranslation, Trans } from 'react-i18next';
 
@@ -16,6 +16,7 @@ import { useAuthentication } from '@contexts/authentication-context';
 import useAccountSync, { AccountSyncService, AccountSyncStatus } from 'src/hooks/useAccountSync';
 import GoogleButton from '@components/common/GoogleButton';
 import DropboxButton from '@components/common/DropboxButton';
+import { AppEvents, awaitAppEvent as awaitEvent, appBus as bus } from 'src/events';
 
 const LoginView: FC = () => {
   const { t } = useTranslation();
@@ -28,35 +29,64 @@ const LoginView: FC = () => {
     setIsAuthenticated,
   } = useAuthentication();
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingInfo, setLoadingInfo] = useState('');
 
   const { service: accountSyncService, status: accountSyncStatus } = useAccountSync();
 
+  useEffect(() => {
+    const listener = () => {
+      setError(t('Something went wrong, please check your credentials.'));
+      setIsLoading(false);
+      setLoadingInfo('');
+    }
+
+    bus.addListener(AppEvents.NEW_SYNC_CMIX_FAILED, listener);
+
+    return () => { bus.removeListener(AppEvents.NEW_SYNC_CMIX_FAILED, listener); }
+  }, [t]);
+  
   const handleSubmit = useCallback(async () => {
     setError('');
     setIsLoading(true);
     setTimeout(async () => {
       try {
-        getOrInitPassword(password);
+        const success = await getOrInitPassword(password);
+        if (success) {
+          setIsAuthenticated(true);
+        } else {
+          setError(t('Something went wrong, please check your credentials.'));
+        }
         setIsLoading(false);
-        setIsAuthenticated(true);
       } catch (e) {
         setError((e as Error).message);
         setIsLoading(false);
       }
     }, 1);
-  }, [getOrInitPassword, password, setIsAuthenticated]);
+  }, [getOrInitPassword, password, setIsAuthenticated, t]);
 
-  const onSyncLoad = useCallback(() => {
+  const onSyncLoad = useCallback(async () => {
     setError('');
     setIsLoading(true);
     try {
-      getOrInitPassword(password);
-      setIsAuthenticated(true);
+      const success = await getOrInitPassword(password);
+      if (!success) {
+        setError(t('Something went wrong, please check your credentials.'));
+        setIsLoading(false);
+        return;
+      }
+      setLoadingInfo(t('Retrieving account...'));
+      await awaitEvent(AppEvents.CMIX_SYNCED)
+        .then(() => { setIsAuthenticated(true); })
+        .catch(() => { setError(t('Something went wrong, please check your credentials.'))})
+        .finally(() => {
+          setIsLoading(false);
+          setLoadingInfo('')
+        });
     } catch (e) {
       setError((e as Error).message);
       setIsLoading(false);
     }
-  }, [getOrInitPassword, password, setIsAuthenticated]);
+  }, [getOrInitPassword, password, setIsAuthenticated, t]);
 
   return (
     <div className={cn('', s.root)}>
@@ -160,6 +190,11 @@ const LoginView: FC = () => {
             </div>
             {isLoading && (
               <div className={s.loading}>
+                {loadingInfo && (
+                  <p className='mt-4'>
+                    {loadingInfo}
+                  </p>
+                )}
                 <Spinner />
               </div>
             )}

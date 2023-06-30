@@ -1,17 +1,18 @@
 import { WithChildren } from '@types';
 
 import React, { FC, useCallback, useEffect, useMemo, useState } from 'react';
-import { STATE_PATH } from '../constants';
 import { useUtils } from 'src/contexts/utils-context';
 import { v4 as uuid } from 'uuid';
 import useAccountSync, { AccountSyncService, AccountSyncStatus } from 'src/hooks/useAccountSync';
+import useLocalStorage from 'src/hooks/useLocalStorage';
+import { AppEvents, appBus as bus } from 'src/events';
 
 type AuthenticationContextType = {
   setSyncLoginService: (service: AccountSyncService) => void;
   cancelSyncLogin: () => void;
   cmixPreviouslyInitialized: boolean;
   attemptingSyncedLogin: boolean;
-  getOrInitPassword: (password: string) => boolean;
+  getOrInitPassword: (password: string) => Promise<boolean>;
   encryptedPassword?: Uint8Array;
   rawPassword?: string;
   isAuthenticated: boolean;
@@ -25,22 +26,22 @@ export const AuthenticationContext = React.createContext<AuthenticationContextTy
 
 AuthenticationContext.displayName = 'AuthenticationContext';
 
-const statePathExists = () => {
-  return localStorage && localStorage.getItem(STATE_PATH) !== null;
-};
-
 export const AuthenticationProvider: FC<WithChildren> = (props) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const instanceId = useMemo(() => uuid(), []);
   const { utils } = useUtils();
   const authChannel = useMemo<BroadcastChannel>(() => new BroadcastChannel('authentication'), []);
-  const [encryptedPassword, setEncryptedPassword] = useState<Uint8Array>();
   const [rawPassword, setRawPassword] = useState<string>();
+
   const {
     setService: setAccountSyncService,
     setStatus: setAccountSyncStatus,
     status: accountSyncStatus
   } = useAccountSync();
+  const [
+    cmixPreviouslyInitialized,
+    setCmixWasPreviouslyInitialized
+  ] = useLocalStorage('cmixPreviouslyInitialized', false);
 
   const setSyncLoginService = useCallback((service: AccountSyncService) => {
     setAccountSyncService(service);
@@ -52,11 +53,20 @@ export const AuthenticationProvider: FC<WithChildren> = (props) => {
     setAccountSyncService(AccountSyncService.None);
   }, [setAccountSyncService, setAccountSyncStatus]);
 
-  const getOrInitPassword = useCallback((password: string) => {
+  useEffect(() => {
+    const listener = () => {
+      setRawPassword('');
+    };
+    bus.addListener(AppEvents.NEW_SYNC_CMIX_FAILED, listener);
+
+    return () => { bus.removeListener(AppEvents.NEW_SYNC_CMIX_FAILED, listener) }
+  }, []);
+
+  const getOrInitPassword = useCallback(async (password: string) => {
     try {
-      setRawPassword(password);
-      const encrypted = utils.GetOrInitPassword(password);
-      setEncryptedPassword(encrypted);
+      setRawPassword(password); 
+      const encrypted = await utils.GetOrInitPassword(password);
+      bus.emit(AppEvents.PASSWORD_DECRYPTED, encrypted, password);
       return true;
     } catch (error) {
       console.error('GetOrInitPassword failed', error);
@@ -82,15 +92,24 @@ export const AuthenticationProvider: FC<WithChildren> = (props) => {
     }
   }, [authChannel, isAuthenticated, instanceId]);
 
-  const cmixPreviouslyInitialized = statePathExists();
+  useEffect(() => {
+    const listener = () => {
+      setCmixWasPreviouslyInitialized(true);
+    }
+    
+    bus.addListener(AppEvents.CHANNEL_MANAGER_LOADED, listener);
+
+    return () => {
+      bus.removeListener(AppEvents.CHANNEL_MANAGER_LOADED, listener);
+    }
+  }, [setCmixWasPreviouslyInitialized])
 
   return (
     <AuthenticationContext.Provider
       value={{
         setSyncLoginService,
         cancelSyncLogin,
-        cmixPreviouslyInitialized,
-        encryptedPassword,
+        cmixPreviouslyInitialized: !!cmixPreviouslyInitialized,
         attemptingSyncedLogin: !cmixPreviouslyInitialized && accountSyncStatus === AccountSyncStatus.Synced,
         getOrInitPassword,
         instanceId,

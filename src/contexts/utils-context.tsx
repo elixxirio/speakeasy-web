@@ -4,10 +4,10 @@ import type { DMClient } from 'src/types';
 
 import React, { FC, useCallback, useState } from 'react';
 import { decoder } from '@utils/index';
-import Loading from '@components/modals/LoadingView';
+import Loading from 'src/components/views/LoadingView';
 import { identityDecoder } from '@utils/decoders';
 import { RemoteStore } from 'src/types/collective';
-import { ChannelEventHandler, DMReceivedCallback } from 'src/events';
+import { ChannelEventHandler, DMEventHandler } from 'src/events';
 import { WebAssemblyRunner } from '@components/common';
 import { useTranslation } from 'react-i18next';
 
@@ -19,11 +19,15 @@ export enum PrivacyLevel {
 
 export type Cipher = {
   GetID: () => number;
-  Decrypt: (plaintext: Uint8Array) => Uint8Array;
+  Decrypt: (plaintext: string) => Uint8Array;
 }
 
 export type ChannelManagerCallbacks = {
   EventUpdate: ChannelEventHandler;
+}
+
+export type DMClientEventCallback = {
+  EventUpdate: DMEventHandler;
 }
 
 export type Notifications = {
@@ -78,12 +82,13 @@ export type XXDKUtils = {
   ) => Promise<ChannelManager>;
   NewDMClientWithIndexedDb: (
     cmixId: number,
+    notificationsId: number,
+    cipherId: number,
     wasmJsPath: string,
     privateIdentity: Uint8Array,
-    messageCallback: DMReceivedCallback,
-    cipherId: number
+    eventCallback: DMClientEventCallback
   ) => Promise<DMClient>;
-  NewDMsDatabaseCipher: (cmixId: number, storagePassword: Uint8Array, payloadMaximumSize: number) => Cipher
+  NewDatabaseCipher: (cmixId: number, storagePassword: Uint8Array, payloadMaximumSize: number) => Cipher
   LoadChannelsManagerWithIndexedDb: (
     cmixId: number,
     wasmJsPath: string,
@@ -98,7 +103,7 @@ export type XXDKUtils = {
   GetShareUrlType: (url: string) => PrivacyLevel;
   GetVersion: () => string;
   GetClientVersion: () => string;
-  GetOrInitPassword: (password: string) => Uint8Array;
+  GetOrInitPassword: (password: string) => Promise<Uint8Array>;
   ImportPrivateIdentity: (password: string, privateIdentity: Uint8Array) => Uint8Array;
   ConstructIdentity: (publicKey: Uint8Array, codesetVersion: number) => Uint8Array;
   DecodePrivateURL: (url: string, password: string) => string;
@@ -111,7 +116,6 @@ export type XXDKUtils = {
     upperBoundIntervalBetweenCyclesMilliseconds: number
   ) => DummyTraffic;
   GetWasmSemanticVersion: () => Uint8Array;
-  NewChannelsDatabaseCipher: (cmixId: number, storagePassword: Uint8Array, payloadMaximumSize: number) => Cipher;
   Purge: (userPassword: string) => void;
   ValidForever: () => number;
 }

@@ -1,4 +1,26 @@
-import { AdminKeysUpdateEvent, AllowList, AllowLists, ChannelId, ChannelJSON, DmTokenUpdateEvent, IdentityJSON, IsReadyInfoJSON, MessageDeletedEvent, MessageReceivedEvent, NicknameUpdatedEvent, NotificationFilter, NotificationLevel, NotificationState, NotificationStatus, NotificationUpdateEvent, ShareURLJSON, UserMutedEvent, VersionJSON } from 'src/types';
+import {
+  AdminKeysUpdateEvent,
+  ChannelId,
+  ChannelJSON,
+  ChannelStatus,
+  ChannelUpdateEvent,
+  DMBlockedUserEvent,
+  DMNotificationLevelState,
+  DMNotificationsUpdateEvent,
+  DMReceivedEvent,
+  IdentityJSON,
+  IsReadyInfoJSON,
+  MessageDeletedEvent,
+  MessageReceivedEvent,
+  NicknameUpdatedEvent,
+  NotificationLevel,
+  NotificationState,
+  NotificationStatus,
+  NotificationUpdateEvent,
+  ShareURLJSON,
+  UserMutedEvent,
+  VersionJSON
+} from 'src/types';
 import { KVEntry } from 'src/types/collective';
 import { Err, JsonDecoder } from 'ts.data.json';
 import { decoder as uintDecoder } from './index';
@@ -94,7 +116,7 @@ export const versionDecoder = makeDecoder(JsonDecoder.object<VersionJSON>(
   'VersionDecoder'
 ));
 
-export const kvEntryDecoder = makeDecoder(JsonDecoder.object<KVEntry>(
+export const kvEntryDecoder = makeDecoder(JsonDecoder.nullable(JsonDecoder.object<KVEntry>(
   {
     data: JsonDecoder.string,
     version: JsonDecoder.number,
@@ -104,7 +126,7 @@ export const kvEntryDecoder = makeDecoder(JsonDecoder.object<KVEntry>(
     version: 'Version',
     timestamp: 'Timestamp'
   }
-));
+)));
 
 export const messageReceivedEventDecoder = makeDecoder(JsonDecoder.object<MessageReceivedEvent>(
   {
@@ -156,33 +178,6 @@ export const nicknameUpdatedEventDecoder = makeDecoder(JsonDecoder.object<Nickna
   }
 ));
 
-const allowListDecoder = JsonDecoder.dictionary<AllowList>(JsonDecoder.emptyObject, 'AllowListDecoder');
-const allowListsDecoder = JsonDecoder.object<AllowLists>(
-  {
-    allowWithoutTags: allowListDecoder,
-    allowWithTags: allowListDecoder,
-  },
-  'AllowListsDecoder',
-  {
-    allowWithoutTags: 'AllowWithoutTags',
-    allowWithTags: 'AllowWithTags'
-  }
-)
-
-const notificationFilterDecoder = JsonDecoder.object<NotificationFilter>(
-  {
-    id: uint8ArrayToStringDecoder,
-    channelId: uint8ArrayToStringDecoder,
-    tags: JsonDecoder.array<string>(JsonDecoder.string, 'TagsDecoder'),
-    allowLists: allowListsDecoder
-  },
-  'NotificationFilterDecoder',
-  {
-    id: 'identifier',
-    channelId: 'channelID',
-  }
-);
-
 export const notificationLevelDecoder = JsonDecoder.enumeration<NotificationLevel>(NotificationLevel, 'NotificationLevelDecoder');
 export const notificationStatusDecoder = JsonDecoder.enumeration<NotificationStatus>(NotificationStatus, 'NotificationStatusDecoder');
 const notificationStateDecoder = JsonDecoder.object<NotificationState>(
@@ -199,10 +194,8 @@ const notificationStateDecoder = JsonDecoder.object<NotificationState>(
 
 export const notificationUpdateEventDecoder = makeDecoder(JsonDecoder.object<NotificationUpdateEvent>(
   {
-    notificationFilters: JsonDecoder.array<NotificationFilter>(notificationFilterDecoder, 'NotificationFilterArrayDecoder'),
     changedNotificationStates: JsonDecoder.array<NotificationState>(notificationStateDecoder, 'ChangedNotificationStatesDecoder'),
     deletedNotificationStates: JsonDecoder.nullable(JsonDecoder.array<ChannelId>(JsonDecoder.string, 'DeletedNotificationStatesDecoder')),
-    maxState: JsonDecoder.number
   },
   'NotificationUpdateEventDecoder',
 ))
@@ -219,14 +212,76 @@ export const adminKeysUpdateDecoder = makeDecoder(JsonDecoder.object<AdminKeysUp
   }
 ));
 
-export const dmTokenUpdateDecoder = makeDecoder(JsonDecoder.object<DmTokenUpdateEvent>(
+export const channelStatusDecoder = JsonDecoder.enumeration<ChannelStatus>(ChannelStatus, 'ChannelStatusDecoder');
+
+export const channelUpdateEventDecoder = makeDecoder(
+  JsonDecoder.array<ChannelUpdateEvent>(
+    JsonDecoder.object<ChannelUpdateEvent>(
+      {
+        channelId: JsonDecoder.string,
+        status: channelStatusDecoder,
+        tokenEnabled: JsonDecoder.boolean
+      },
+      'ChannelUpdateDecoder',
+      {
+        channelId: 'channelID',
+        tokenEnabled: 'broadcastDMToken'
+      }
+    ),
+    'ChannelUpdateEventDecoder')
+);
+
+const dmNotificationLevelStatesDecoder = JsonDecoder.array<DMNotificationLevelState>(
+  JsonDecoder.object<DMNotificationLevelState>(
+    {
+      pubkey: JsonDecoder.string,
+      level: notificationLevelDecoder
+    },
+    'DMNotificationLevelState',
+    {
+      pubkey: 'pubKey',
+    }
+  ),
+  'DMNotificationLevelStateArrayDecoder'
+);
+
+const dmDeletedNotificationStatesDecoder = JsonDecoder.array<string>(JsonDecoder.string, 'DmDeletedNotificationStateArray');
+
+export const dmNotificationsUpdateEventDecoder = makeDecoder(JsonDecoder.object<DMNotificationsUpdateEvent>(
   {
-    channelId: JsonDecoder.string,
-    tokenEnabled: JsonDecoder.boolean
+    changedNotificationStates: dmNotificationLevelStatesDecoder,
+    deletedNotificationStates: dmDeletedNotificationStatesDecoder,
   },
-  'DmTokenUpdateDecoder',
+  'DMNotificationsUpdateEventDecoder',
+
   {
-    channelId: 'channelID',
-    tokenEnabled: 'sendToken'
+    changedNotificationStates: 'changed',
+    deletedNotificationStates: 'deleted'
   }
 ));
+
+export const blockedUserEventDecoder = makeDecoder(JsonDecoder.object<DMBlockedUserEvent>(
+  {
+    pubkey: JsonDecoder.string,
+    blocked: JsonDecoder.boolean
+  },
+  'DMBlockedUserEvent',
+  {
+    pubkey: 'user',
+  }
+));
+
+export const dmReceivedEventDecoder = makeDecoder(JsonDecoder.object<DMReceivedEvent>(
+  {
+    uuid: JsonDecoder.number,
+    pubkey: JsonDecoder.string,
+    update: JsonDecoder.boolean,
+    conversationUpdated: JsonDecoder.boolean
+  },
+  'DMReceivedEventDecoder',
+  {
+    pubkey: 'pubKey',
+    update: 'messageUpdate',
+    conversationUpdated: 'conversationUpdate'
+  }
+))

@@ -1,6 +1,6 @@
-import type { CMix, DBMessage, DBChannel, ChannelJSON, ShareURLJSON, IsReadyInfoJSON, MessageReceivedEvent, NotificationLevel, NotificationStatus, DMClient } from 'src/types';
+import { CMix, DBMessage, DBChannel, ChannelJSON, ShareURLJSON, IsReadyInfoJSON, MessageReceivedEvent, NotificationLevel, NotificationStatus, DMClient, MessageStatus } from 'src/types';
 import type { WithChildren, Message } from 'src/types';
-import { MessageStatus, MessageType } from 'src/types';
+import { MessageType } from 'src/types';
 
 import React, { FC, useState, useEffect,  useCallback, useMemo } from 'react';
 
@@ -8,17 +8,16 @@ import _ from 'lodash';
 import Cookies from 'js-cookie';
 import assert from 'assert';
 
-import { bus, onMessagePinned, onMessageUnpinned, handleChannelEvent, ChannelEvents, AppEvents } from 'src/events';
+import { AppEvents, ChannelEvents, appBus, onChannelEvent, useChannelsListener } from 'src/events';
 
-import { decoder, encoder, exportDataToFile, inflate } from 'src/utils';
+import { decoder, encoder, exportDataToFile } from 'src/utils';
 import { useAuthentication } from 'src/contexts/authentication-context';
 import { PrivacyLevel, useUtils } from 'src/contexts/utils-context';
 import { MESSAGE_LEASE, PIN_MESSAGE_LENGTH_MILLISECONDS, CHANNELS_WORKER_JS_PATH, CMIX_NETWORK_READINESS_THRESHOLD } from '../constants';
-import useNotification from 'src/hooks/useNotification';
+
 import { useDb } from './db-context';
 import useCmix, { NetworkStatus } from 'src/hooks/useCmix';
 import { useAppDispatch, useAppSelector } from 'src/store/hooks';
-
 import * as app from 'src/store/app';
 import * as channels from 'src/store/channels'
 import * as identity from 'src/store/identity';
@@ -27,7 +26,6 @@ import * as dms from 'src/store/dms';
 import { ChannelId, Channel } from 'src/store/channels/types';
 import usePagination from 'src/hooks/usePagination';
 import useDmClient from 'src/hooks/useDmClient';
-import useEvents from 'src/hooks/useEvents';
 import { channelDecoder, identityDecoder, isReadyInfoDecoder, pubkeyArrayDecoder, shareUrlDecoder, versionDecoder } from '@utils/decoders';
 import { RemoteStore } from 'src/types/collective';
 import useChannelsStorageTag from 'src/hooks/useChannelsStorageTag';
@@ -98,6 +96,7 @@ export type ChannelManager = {
   ) => Promise<Uint8Array>;
   IsChannelAdmin: (channelId: Uint8Array) => boolean;
   GetNotificationLevel: (channelId: Uint8Array) => NotificationLevel;
+  GetNotificationStatus: (channelId: Uint8Array) => NotificationStatus;
   SetMobileNotificationsLevel: (channelId: Uint8Array, notificationLevel: NotificationLevel, notificationStatus: NotificationStatus) => void;
   GenerateChannel: (channelname: string, description: string, privacyLevel: PrivacyLevel) => Promise<string>;
   GetStorageTag: () => string | undefined;
@@ -162,11 +161,12 @@ export type NetworkContext = {
   getVersion: () => string | null;
   getClientVersion: () => string | null;
   loadMoreChannelData: (channelId: string) => Promise<void>;
-  exportPrivateIdentity: (password: string) => Uint8Array | false;
+  exportPrivateIdentity: (password: string) => Promise<Uint8Array | false>;
   pinMessage: (message: Message, unpin?: boolean) => Promise<void>;
   logout: (password: string) => boolean;
   channelManager?: ChannelManager;
   remoteStore?: RemoteStore;
+  fetchChannels: () => Promise<Channel[]>;
 };
 
 export const NetworkClientContext = React.createContext<NetworkContext>({
@@ -194,14 +194,11 @@ const savePrettyPrint = (channelId: string, prettyPrint: string) => {
 };
 
 export const NetworkProvider: FC<WithChildren> = props => {
-  const { encryptedPassword, rawPassword } = useAuthentication();
-  useEvents();
   const pagination = usePagination();
   const dispatch = useAppDispatch();
   const db = useDb();
   const { setIsAuthenticated } = useAuthentication();
   const { set: setStorageTag, value: storageTag } = useChannelsStorageTag();
-  const { messagePinned, messageReplied, notifyMentioned } = useNotification();
   const { getCodeNameAndColor, utils } = useUtils();
   const [mutedUsers, setMutedUsers] = useState<User[]>();
   const {
@@ -209,28 +206,18 @@ export const NetworkProvider: FC<WithChildren> = props => {
     cmix,
     disconnect,
     id: cmixId,
-    remoteStore,
     status: cmixStatus
   } = useCmix();
   const [channelManager, setChannelManager] = useState<ChannelManager | undefined>();
   const bc = useMemo(() => new BroadcastChannel('join_channel'), []);
-  const allMessagesByChannelId = useAppSelector((state) => state.messages.byChannelId);
   const currentChannelPages = useAppSelector(channels.selectors.channelPages);
   const currentConversationId = useAppSelector(app.selectors.currentChannelOrConversationId);
   const currentChannel = useAppSelector(channels.selectors.currentChannel);
   const currentChannels = useAppSelector(channels.selectors.channels);
   const currentMessages = useAppSelector(messages.selectors.currentChannelMessages);
+  const allMessagesByChannelId = useAppSelector(messages.selectors.messagesByChannelId);
   const currentConversation = useAppSelector(dms.selectors.currentConversation);
-
-  const userIdentity = useAppSelector(identity.selectors.identity);
-  const privateIdentity = useMemo(
-    () => (channelManager && rawPassword)
-      ? utils.ImportPrivateIdentity(rawPassword, channelManager.ExportPrivateIdentity(rawPassword))
-      : undefined,
-    [channelManager, rawPassword, utils]
-  );
-
-  const dmClient = useDmClient(cmixId, privateIdentity, encryptedPassword);
+  const dmClient = useDmClient();
 
   const upgradeAdmin = useCallback(() => {
     if (currentChannel?.id) {
@@ -408,70 +395,15 @@ export const NetworkProvider: FC<WithChildren> = props => {
     if (db && cipher?.decrypt) {
       const receivedMessage = await db.table<DBMessage>('messages').get(uuid);
 
-      if (!receivedMessage) {
-        return;
-      }
-      
-      const decryptedText = cipher.decrypt(receivedMessage.text);
-
-      // Notify user if message mentions him/her/they/banana
-      if (receivedMessage.status === MessageStatus.Delivered) {
-        const inflatedText = inflate(decryptedText);
-        const mentions = new DOMParser()
-          .parseFromString(inflatedText, 'text/html')
-          .getElementsByClassName('mention');
-  
-        for (let i = 0; i < mentions.length; i++) {
-          const mention = mentions[i];
-          const mentionedPubkey = mention.getAttribute('data-id');
-  
-          if (mentionedPubkey === userIdentity?.pubkey) {
-            const { codename } = getCodeNameAndColor(receivedMessage.pubkey, receivedMessage.codeset_version);
-            notifyMentioned(
-              receivedMessage.nickname || codename,
-              decryptedText
-            );
-            break;
-          }
-        }
-      }
-
-      if (
-          receivedMessage?.type !== MessageType.Reaction && // Remove emoji reactions, Ben thinks theyre annoying
-          receivedMessage?.parent_message_id
-          && receivedMessage?.pubkey !== userIdentity?.pubkey) {
-        const replyingTo = await db.table<DBMessage>('messages')
-          .where('message_id')
-          .equals(receivedMessage?.parent_message_id)
-          .first();
-        if (replyingTo?.pubkey === userIdentity?.pubkey) {
-          const { codename } = getCodeNameAndColor(receivedMessage.pubkey, receivedMessage.codeset_version);
-          messageReplied(
-            receivedMessage.nickname || codename,
-            decryptedText
-          )
-        }
-      }
-
-      const oldMessage = allMessagesByChannelId[receivedMessage?.channel_id]?.[receivedMessage.id];
-
-      // notify new pinned messages
-      if (!oldMessage?.pinned && receivedMessage?.pinned) {
-        const foundChannel = currentChannels.find(({ id }) => receivedMessage.channel_id === id);
-        onMessagePinned(dbMessageMapper(receivedMessage));
-        messagePinned(
-          decryptedText,
-          foundChannel?.name ?? 'unknown'
-        );
-      }
-
-      if (oldMessage?.pinned && !receivedMessage.pinned) {
-        onMessageUnpinned(dbMessageMapper(receivedMessage));
-      }
-
       if (receivedMessage) {
         const mappedMessage = dbMessageMapper(receivedMessage);
+        const oldMessage = allMessagesByChannelId[mappedMessage.channelId]?.[mappedMessage.uuid];
+
         dispatch(messages.actions.upsert(mappedMessage));
+      
+        if (mappedMessage.status === MessageStatus.Delivered) {
+          appBus.emit(AppEvents.MESSAGE_PROCESSED, mappedMessage, oldMessage);
+        }
 
         if (receivedMessage.channel_id !== currentChannel?.id) {
           dispatch(app.actions.notifyNewMessage(mappedMessage))
@@ -480,24 +412,14 @@ export const NetworkProvider: FC<WithChildren> = props => {
     }
   }, [
     allMessagesByChannelId,
-    cipher,
+    cipher?.decrypt,
     currentChannel?.id,
-    currentChannels,
     db,
     dbMessageMapper,
-    dispatch,
-    getCodeNameAndColor,
-    notifyMentioned,
-    messagePinned,
-    messageReplied,
-    userIdentity?.pubkey
+    dispatch
   ]);
 
-  useEffect(() => {
-    bus.addListener(ChannelEvents.MESSAGE_RECEIVED, handleMessageEvent);
-
-    return () => { bus.removeListener(ChannelEvents.MESSAGE_RECEIVED, handleMessageEvent) };
-  }, [handleMessageEvent]);
+  useChannelsListener(ChannelEvents.MESSAGE_RECEIVED, handleMessageEvent);
 
   const fetchChannels = useCallback(async () => {
     assert(db);
@@ -621,15 +543,6 @@ export const NetworkProvider: FC<WithChildren> = props => {
     }
   }, [currentChannel?.id, fetchPinnedMessages, fetchReactions]);
 
-  useEffect(() => {
-    if (currentChannel?.id && channelManager) {
-      // const encodedChannelId = utils.Base64ToUint8Array(currentChannel.id);
-      // const level = channelManager.GetNotificationLevel(encodedChannelId);
-      // dispatch(channels.actions.updateNotificationLevel({ channelId: currentChannel.id, level }));
-    }
-  }, [channelManager, currentChannel, dispatch, utils])
-
-
   const loadChannelManager = useCallback(async (tag: string) => {
     if (
       cmixId !== undefined &&
@@ -645,13 +558,13 @@ export const NetworkProvider: FC<WithChildren> = props => {
           new Uint8Array(),
           notifications.GetID(),
           {
-            EventUpdate: handleChannelEvent
+            EventUpdate: onChannelEvent
           },
           cipher?.id
         );
-
+        
       setChannelManager(loadedChannelsManager);
-      bus.emit(AppEvents.CHANNEL_MANAGER_LOADED);
+      appBus.emit(AppEvents.CHANNEL_MANAGER_LOADED, loadedChannelsManager);
     }
   }, [cipher, cmixId, utils]);
 
@@ -711,7 +624,7 @@ export const NetworkProvider: FC<WithChildren> = props => {
         privIdentity,
         new Uint8Array(),
         notifications.GetID(),
-        { EventUpdate: handleChannelEvent },
+        { EventUpdate: onChannelEvent },
         cipher.id
       );
       
@@ -1085,10 +998,10 @@ export const NetworkProvider: FC<WithChildren> = props => {
     } else return null;
   }, [utils]);
 
-  const exportPrivateIdentity = useCallback((password: string) => {
+  const exportPrivateIdentity = useCallback(async (password: string) => {
     if (utils && utils.GetOrInitPassword) {
       try {
-        const statePassEncoded = utils.GetOrInitPassword(password);
+        const statePassEncoded = await utils.GetOrInitPassword(password);
 
         if (
           statePassEncoded &&
@@ -1139,19 +1052,14 @@ export const NetworkProvider: FC<WithChildren> = props => {
 
   const logout = useCallback((password: string) => {
     if (utils && utils.Purge) {
-      try {
-        disconnect();
-        utils.Purge(password);
-        window.localStorage.clear();
-        Cookies.remove('userAuthenticated', { path: '/' });
-        setIsAuthenticated(false);
-        setChannelManager(undefined);
-        window.location.reload();
-        return true;
-      } catch (error) {
-        console.error(error);
-        return false;
-      }
+      disconnect();
+      utils.Purge(password);
+      window.localStorage.clear();
+      Cookies.remove('userAuthenticated', { path: '/' });
+      setIsAuthenticated(false);
+      setChannelManager(undefined);
+      window.location.reload();
+      return true;
     } else {
       return false;
     }
@@ -1266,7 +1174,7 @@ export const NetworkProvider: FC<WithChildren> = props => {
     pinMessage,
     logout,
     upgradeAdmin,
-    remoteStore
+    fetchChannels,
   }
 
   return (
